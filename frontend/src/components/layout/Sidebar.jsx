@@ -43,7 +43,12 @@ export default function Sidebar({ collapsed, onToggle }) {
   }
 
   if (user?.role === 'admin') {
-    navItems.push({ to: '/app/admin', label: 'Admin Dashboard', icon: ShieldAlert })
+    navItems = [
+      { to: '/app/admin', label: 'Admin Dashboard', icon: ShieldAlert },
+      { to: '/app/lawyer/ai', label: 'AI Lawyer', icon: MessagesSquare },
+      { to: '/app/judge/ai', label: 'AI Judge', icon: MessagesSquare },
+      ...navItems
+    ]
   }
 
   return (

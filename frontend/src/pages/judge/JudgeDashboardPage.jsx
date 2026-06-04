@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Gavel, Check, X, FileText } from 'lucide-react'
+import { Gavel, Check, X, FileText, Clock } from 'lucide-react'
 
 import Card, { CardHeader } from '@/components/ui/Card'
 import Spinner from '@/components/ui/Spinner'
 import { api } from '@/api/client'
 
 export default function JudgeDashboardPage() {
-  const [cases, setCases] = useState([])
+  const [allCases, setAllCases] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedCase, setSelectedCase] = useState(null)
   const [overrideVerdict, setOverrideVerdict] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState('pending') // 'pending' or 'history'
 
   const renderOutput = (data, fallback = 'No data found.') => {
     if (!data) return fallback;
@@ -36,8 +37,7 @@ export default function JudgeDashboardPage() {
     const fetchCases = async () => {
       try {
         const data = await api.judgeGetCases()
-        // Filter to only show cases that are in trial/awaiting verdict
-        setCases(data.filter(c => c.status === 'trial' || c.status === 'awaiting_verdict'))
+        setAllCases(data)
       } catch (err) {
         console.error(err)
       } finally {
@@ -46,6 +46,11 @@ export default function JudgeDashboardPage() {
     }
     fetchCases()
   }, [])
+
+  const pendingCases = allCases.filter(c => c.status === 'trial' || c.status === 'awaiting_verdict')
+  const historyCases = allCases.filter(c => c.status === 'closed')
+
+  const displayedCases = activeTab === 'pending' ? pendingCases : historyCases
 
   const handleVerdict = async (status) => {
     if (!selectedCase) return
@@ -57,9 +62,9 @@ export default function JudgeDashboardPage() {
         },
         status
       }
-      await api.judgeSubmitVerdict(selectedCase.id, payload)
-      // Remove from list
-      setCases(cases.filter(c => c.id !== selectedCase.id))
+      const updatedCase = await api.judgeSubmitVerdict(selectedCase.id, payload)
+      // Update in list
+      setAllCases(allCases.map(c => c.id === selectedCase.id ? { ...c, ...updatedCase } : c))
       setSelectedCase(null)
     } catch (err) {
       console.error(err)
@@ -72,13 +77,27 @@ export default function JudgeDashboardPage() {
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
-      {/* List of pending cases */}
+      {/* List of cases */}
       <div className="md:w-1/3 space-y-4">
-        <h2 className="font-serif text-2xl mb-4">Pending Verdicts</h2>
-        {cases.length === 0 ? (
-          <p className="text-ink-400">No cases awaiting verdict.</p>
+        <div className="flex gap-4 mb-4 border-b border-white/10 pb-2">
+          <button
+            onClick={() => { setActiveTab('pending'); setSelectedCase(null) }}
+            className={`font-serif text-xl transition ${activeTab === 'pending' ? 'text-gold-300' : 'text-ink-400 hover:text-white'}`}
+          >
+            Pending Verdicts
+          </button>
+          <button
+            onClick={() => { setActiveTab('history'); setSelectedCase(null) }}
+            className={`font-serif text-xl transition ${activeTab === 'history' ? 'text-gold-300' : 'text-ink-400 hover:text-white'}`}
+          >
+            History
+          </button>
+        </div>
+
+        {displayedCases.length === 0 ? (
+          <p className="text-ink-400">No cases found in this category.</p>
         ) : (
-          cases.map(c => (
+          displayedCases.map(c => (
             <div 
               key={c.id} 
               onClick={() => setSelectedCase(c)}
@@ -86,6 +105,12 @@ export default function JudgeDashboardPage() {
             >
               <div className="font-medium truncate">{c.id}</div>
               <div className="text-xs text-ink-400 mt-1 truncate">{c.question}</div>
+              {activeTab === 'history' && (
+                <div className="mt-2 flex items-center gap-1 text-xs text-gold-300">
+                  <Clock className="w-3 h-3" />
+                  <span className="capitalize">{c.human_verdict_status}</span>
+                </div>
+              )}
             </div>
           ))
         )}
@@ -128,39 +153,61 @@ export default function JudgeDashboardPage() {
             )}
 
             <Card>
-              <CardHeader icon={Gavel} title="AI Recommended Verdict" />
+              <CardHeader icon={Gavel} title="AI Recommended Judgement" />
               <div className="p-4 text-sm leading-relaxed space-y-4">
                 {selectedCase.judgement_output ? renderOutput(selectedCase.judgement_output) : 'No judgment found.'}
               </div>
             </Card>
 
-            <Card>
-              <CardHeader icon={Gavel} title="Judge Action" />
-              <div className="p-4 space-y-4">
-                <textarea
-                  value={overrideVerdict}
-                  onChange={(e) => setOverrideVerdict(e.target.value)}
-                  className="w-full h-24 rounded-xl bg-ink-900 border border-white/10 p-3 text-sm focus:border-gold-500/50 outline-none"
-                  placeholder="Leave blank to approve AI verdict, or enter override details here..."
-                />
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => handleVerdict('approved')}
-                    disabled={submitting}
-                    className="flex-1 flex justify-center items-center gap-2 py-2 rounded-xl bg-green-500/20 text-green-300 hover:bg-green-500/30 transition disabled:opacity-50"
-                  >
-                    <Check className="w-4 h-4" /> Approve
-                  </button>
-                  <button 
-                    onClick={() => handleVerdict(overrideVerdict.trim() ? 'modified' : 'rejected')}
-                    disabled={submitting}
-                    className="flex-1 flex justify-center items-center gap-2 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition disabled:opacity-50"
-                  >
-                    <X className="w-4 h-4" /> {overrideVerdict.trim() ? 'Override' : 'Reject'}
-                  </button>
+            {selectedCase.status === 'closed' ? (
+              <Card>
+                <CardHeader icon={Gavel} title="Final Judgment (Judge)" />
+                <div className="p-4 text-sm leading-relaxed space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`px-2 py-1 rounded text-xs uppercase tracking-wider font-bold ${
+                      selectedCase.human_verdict_status === 'approved' ? 'bg-green-500/20 text-green-300' :
+                      selectedCase.human_verdict_status === 'rejected' ? 'bg-red-500/20 text-red-300' :
+                      'bg-gold-500/20 text-gold-300'
+                    }`}>
+                      {selectedCase.human_verdict_status}
+                    </span>
+                  </div>
+                  {selectedCase.human_verdict?.final_judgment ? (
+                    <p>{selectedCase.human_verdict.final_judgment}</p>
+                  ) : (
+                    <p className="text-ink-400 italic">No additional override details provided.</p>
+                  )}
                 </div>
-              </div>
-            </Card>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader icon={Gavel} title="Judge Action" />
+                <div className="p-4 space-y-4">
+                  <textarea
+                    value={overrideVerdict}
+                    onChange={(e) => setOverrideVerdict(e.target.value)}
+                    className="w-full h-24 rounded-xl bg-ink-900 border border-white/10 p-3 text-sm focus:border-gold-500/50 outline-none"
+                    placeholder="Leave blank to approve AI verdict, or enter override details here..."
+                  />
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => handleVerdict('approved')}
+                      disabled={submitting}
+                      className="flex-1 flex justify-center items-center gap-2 py-2 rounded-xl bg-green-500/20 text-green-300 hover:bg-green-500/30 transition disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4" /> Approve
+                    </button>
+                    <button 
+                      onClick={() => handleVerdict(overrideVerdict.trim() ? 'modified' : 'rejected')}
+                      disabled={submitting}
+                      className="flex-1 flex justify-center items-center gap-2 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition disabled:opacity-50"
+                    >
+                      <X className="w-4 h-4" /> {overrideVerdict.trim() ? 'Override' : 'Reject'}
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            )}
           </motion.div>
         ) : (
           <div className="h-full flex items-center justify-center text-ink-500">

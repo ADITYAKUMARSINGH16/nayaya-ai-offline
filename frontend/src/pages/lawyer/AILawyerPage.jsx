@@ -6,6 +6,10 @@ import Card, { CardHeader } from '@/components/ui/Card'
 import Spinner from '@/components/ui/Spinner'
 import { api } from '@/api/client'
 import ConversationsSidebar from '@/components/ConversationsSidebar'
+import Badge from '@/components/ui/Badge'
+import CitationCard from '@/components/CitationCard'
+import CitationModal from '@/components/CitationModal'
+import Disclaimer from '@/components/Disclaimer'
 
 export default function AILawyerPage() {
   const [caseFacts, setCaseFacts] = useState('')
@@ -13,6 +17,7 @@ export default function AILawyerPage() {
   const [analysis, setAnalysis] = useState(null)
   const [error, setError] = useState('')
   const [sessionId, setSessionId] = useState(null)
+  const [activeCitation, setActiveCitation] = useState(null)
 
   const handleSelectHistory = async (id) => {
     setSessionId(id)
@@ -67,11 +72,12 @@ export default function AILawyerPage() {
         category="lawyer"
       />
 
-      <div className="flex-1 min-w-0 overflow-y-auto pr-1 space-y-6 pb-8">
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="font-serif text-3xl">AI Lawyer Analysis</h1>
-          <p className="text-ink-400 mt-1">Generate strategic analysis, identify weaknesses, and prepare for trial.</p>
-        </motion.div>
+      <div className="grid lg:grid-cols-[1fr_340px] gap-4 flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-y-auto pr-1 space-y-6 pb-8">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+            <h1 className="font-serif text-3xl">AI Lawyer Analysis</h1>
+            <p className="text-ink-400 mt-1">Generate strategic analysis, identify weaknesses, and prepare for trial.</p>
+          </motion.div>
 
       <Card>
         <CardHeader icon={Scale} title="Case Facts" />
@@ -136,6 +142,29 @@ export default function AILawyerPage() {
         </motion.div>
       )}
       </div>
+
+        {/* Citations Sidebar */}
+        <Card className="overflow-hidden flex flex-col h-full">
+          <CardHeader title="Citations" subtitle="Sections retrieved & graph-expanded" />
+          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            {!analysis?.citations?.length ? (
+              <p className="text-sm text-ink-400">
+                Citations from the legal database will appear here once you analyze a case.
+              </p>
+            ) : (
+              analysis.citations.map((c, i) => (
+                <CitationCard key={i} citation={c} onClick={setActiveCitation} />
+              ))
+            )}
+          </div>
+          <Disclaimer className="mt-4" />
+        </Card>
+      </div>
+
+      <CitationModal
+        citation={activeCitation}
+        onClose={() => setActiveCitation(null)}
+      />
     </div>
   )
 }

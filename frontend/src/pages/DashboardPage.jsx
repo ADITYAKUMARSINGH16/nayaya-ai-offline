@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { MessagesSquare, FileText, ShieldAlert, Gavel, ArrowRight, History } from 'lucide-react'
+import { MessagesSquare, FileText, ShieldAlert, Gavel, ArrowRight, History, BarChart3 } from 'lucide-react'
 
 import Card, { CardHeader } from '@/components/ui/Card'
 import { useAuth } from '@/context/AuthContext'
@@ -23,8 +23,25 @@ const QUICK_ACTIONS_JUDGE = [
   { to: '/app/cases',         icon: History,        title: 'Case History',       desc: 'View all closed and active cases.' },
 ]
 
+const QUICK_ACTIONS_ADMIN = [
+  { to: '/app/admin',         icon: ShieldAlert,    title: 'Admin Dashboard',    desc: 'Manage users and platform access.' },
+  { to: '/app/lawyer/ai',     icon: MessagesSquare, title: 'Test AI Lawyer',     desc: 'Evaluate lawyer agent responses.' },
+  { to: '/app/judge/ai',      icon: MessagesSquare, title: 'Test AI Judge',      desc: 'Evaluate judge agent reasoning.' },
+  { to: '/app/eval',          icon: BarChart3,      title: 'Evaluation',         desc: 'Review system metrics and evaluations.' },
+]
+
 export default function DashboardPage() {
   const { user } = useAuth()
+  
+  const getActionsByRole = () => {
+    if (user?.role === 'admin') return QUICK_ACTIONS_ADMIN
+    if (user?.role === 'lawyer') return QUICK_ACTIONS_LAWYER
+    if (user?.role === 'judge') return QUICK_ACTIONS_JUDGE
+    return QUICK_ACTIONS_USER
+  }
+
+  const actions = getActionsByRole()
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -38,7 +55,7 @@ export default function DashboardPage() {
 
       {/* Quick actions */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {(user?.role === 'lawyer' ? QUICK_ACTIONS_LAWYER : user?.role === 'judge' ? QUICK_ACTIONS_JUDGE : QUICK_ACTIONS_USER).map((a, i) => (
+        {actions.map((a, i) => (
           <Link key={a.to} to={a.to}>
             <motion.div
               initial={{ opacity: 0, y: 8 }}

@@ -86,6 +86,12 @@ def update_fir_status(record_id: str, status: str) -> dict[str, Any]:
     return (res.data or [{}])[0]
 
 
+def list_all_firs() -> list[dict[str, Any]]:
+    """List all FIRs (for Admin oversight)."""
+    res = _client().table("fir_records").select("*").order("created_at", desc=True).execute()
+    return res.data or []
+
+
 # ---- investigation ------------------------------------------------------
 
 def save_investigation(record: dict[str, Any]) -> dict[str, Any]:

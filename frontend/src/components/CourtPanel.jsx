@@ -36,12 +36,33 @@ export default function CourtPanel({ role, data, delay = 0 }) {
 
         {Array.isArray(data.arguments) && data.arguments.length > 0 && (
           <ul className="space-y-1.5 text-sm text-ink-200">
-            {data.arguments.map((a, i) => (
-              <li key={i} className="flex gap-2">
-                <span className="text-gold-400">·</span>
-                <span>{a}</span>
-              </li>
-            ))}
+            {data.arguments.map((a, i) => {
+              let text = a;
+              if (typeof a === 'object' && a !== null) {
+                text = a.argument || a.text || Object.values(a)[0] || JSON.stringify(a);
+              } else if (typeof a === 'string') {
+                try {
+                  const parsed = JSON.parse(a);
+                  if (parsed && typeof parsed === 'object' && parsed.argument) {
+                    text = parsed.argument;
+                  }
+                } catch (e) {
+                  const match = a.match(/['"]argument['"]\s*:\s*['"]([\s\S]*?)['"]\s*,\s*['"]legal_reference['"]/);
+                  if (match) {
+                    text = match[1].replace(/\\'/g, "'").replace(/\\"/g, '"');
+                  } else {
+                    const fallback = a.match(/['"]?argument['"]?\s*:\s*['"]([\s\S]*?)['"]\s*[},]/);
+                    if (fallback) text = fallback[1].replace(/\\'/g, "'").replace(/\\"/g, '"');
+                  }
+                }
+              }
+              return (
+                <li key={i} className="flex gap-2">
+                  <span className="text-gold-400">·</span>
+                  <span>{text}</span>
+                </li>
+              )
+            })}
           </ul>
         )}
       </div>

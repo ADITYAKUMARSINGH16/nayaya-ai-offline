@@ -87,6 +87,11 @@ export const api = {
       signal,
       onEvent: (event, data) => onEvent?.({ event, data }),
     }),
+
+  // Admin
+  adminGetFirs: () => request('/api/admin/firs'),
+  adminGetCases: () => request('/api/admin/cases'),
+  adminOverrideFirStatus: (firId, status) => request(`/api/admin/firs/${firId}/status`, { method: 'POST', body: { status } }),
 }
 
 /**

@@ -39,6 +39,35 @@ async def stats(_: Annotated[CurrentUser, Depends(_require_admin_or_internal)]):
     return {"graph": graph_stats()}
 
 
+@router.get("/firs")
+async def get_all_firs(_: Annotated[CurrentUser, Depends(_require_admin_or_internal)]):
+    """Get all FIRs across the platform (Admin only)."""
+    from app.services import db
+    return {"firs": db.list_all_firs()}
+
+
+@router.post("/firs/{fir_id}/status")
+async def override_fir_status(
+    fir_id: str,
+    status_update: dict,
+    _: Annotated[CurrentUser, Depends(_require_admin_or_internal)]
+):
+    """Force override an FIR status (e.g. if stuck)."""
+    new_status = status_update.get("status")
+    if not new_status:
+        raise HTTPException(status_code=400, detail="Missing 'status' in body")
+    from app.services import db
+    updated = db.update_fir_status(fir_id, new_status)
+    return {"ok": True, "fir": updated}
+
+
+@router.get("/cases")
+async def get_all_cases(_: Annotated[CurrentUser, Depends(_require_admin_or_internal)]):
+    """Get all Cases across the platform (Admin only)."""
+    from app.services import db
+    return {"cases": db.list_all_cases()}
+
+
 # Backend root — /app in Docker, the actual repo dir on Render.
 # Using __file__ so we don't hardcode a Docker-only path.
 _BACKEND_ROOT = str(Path(__file__).resolve().parents[2])
