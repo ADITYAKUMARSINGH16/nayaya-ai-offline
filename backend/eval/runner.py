@@ -42,7 +42,7 @@ async def _run_one(client: httpx.AsyncClient, case: dict[str, Any]) -> dict[str,
                 "sessionId": f"eval-{int(t0)}",
                 "userId": None,
             },
-            timeout=120.0,
+            timeout=600.0,
         )
         ms = (time.perf_counter() - t0) * 1000
         r.raise_for_status()
