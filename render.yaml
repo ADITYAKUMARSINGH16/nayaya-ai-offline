@@ -1,0 +1,48 @@
+# Render blueprint — defines the backend web service.
+# To use: Render dashboard → New + → Blueprint → connect this repo → "Apply".
+# Fills env vars from the Render dashboard; only PINECONE_INDEX is pre-set here.
+services:
+  - type: web
+    name: nyaya-ai-backend
+    runtime: python
+    plan: free                # 750 hr/mo, sleeps after 15 min idle
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: PINECONE_INDEX
+        value: rag-legal
+      - key: EMBEDDINGS_PROVIDER
+        value: openai
+      - key: EMBEDDINGS_MODEL
+        value: text-embedding-3-small
+      - key: EMBEDDINGS_DIM
+        value: "768"
+      - key: LLM_PROVIDER
+        value: openai
+      - key: OPENAI_MODEL
+        value: gpt-5-nano
+      - key: OPENAI_FAST_MODEL
+        value: gpt-5-nano
+      - key: AUTH_REQUIRED
+        value: "false"
+      # Secrets — set these in the Render dashboard, NOT here:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: ADMIN_INTERNAL_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false                 # set to your Vercel URL after first frontend deploy

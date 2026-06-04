@@ -1,0 +1,191 @@
+@import './print.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root { color-scheme: dark; }
+  html.light { color-scheme: light; }
+
+  html, body, #root { height: 100%; }
+
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(230,178,45,0.08), transparent 60%),
+      radial-gradient(900px 500px at -10% 30%, rgba(58,66,117,0.35), transparent 60%),
+      #03050f;
+    background-attachment: fixed;
+  }
+  html.light body {
+    background:
+      radial-gradient(1000px 600px at 80% -10%, rgba(230,178,45,0.10), transparent 60%),
+      #f7f8fc;
+    color: #181d44;
+  }
+  ::selection { background: rgba(230, 178, 45, 0.35); }
+
+  /* ----------------------------------------------------------------------
+   * LIGHT-MODE OVERRIDES for tokens that hard-code dark-mode values.
+   * Tailwind's @apply with arbitrary opacity (e.g. text-ink-300) doesn't
+   * cascade properly when the design assumed a dark background everywhere.
+   * Force the right contrast on common utility classes under html.light.
+   * --------------------------------------------------------------------- */
+  html.light .text-ink-50  { color: #181d44; }
+  html.light .text-ink-100 { color: #1f2452; }
+  html.light .text-ink-200 { color: #2a3066; }
+  html.light .text-ink-300 { color: #4d5588; }
+  html.light .text-ink-400 { color: #6c75a8; }
+
+  html.light .bg-ink-950\/40,
+  html.light .bg-ink-950\/60,
+  html.light .bg-ink-900\/60,
+  html.light .bg-ink-800\/40 { background-color: rgba(255, 255, 255, 0.92); }
+
+  html.light .border-white\/5,
+  html.light .border-white\/10 { border-color: #e4e7ef; }
+
+  html.light .hover\:bg-white\/5:hover,
+  html.light .hover\:bg-white\/10:hover { background-color: #eef0f6; }
+
+  html.light .divide-white\/5 > * + * { border-color: #e4e7ef; }
+
+  /* The faint background-on-hover used for sidebar/tile rows */
+  html.light .bg-white\/5 { background-color: #f0f2f8; }
+  html.light .bg-white\/10 { background-color: #e6e9f2; }
+}
+
+@layer components {
+  .glass {
+    @apply bg-ink-900/60 backdrop-blur-xl border border-white/5 shadow-card;
+  }
+  html.light .glass {
+    background-color: rgba(255, 255, 255, 0.92);
+    border-color: #e4e7ef;
+    box-shadow: 0 4px 16px rgba(24, 29, 68, 0.06);
+  }
+
+  .glass-light {
+    @apply bg-ink-800/40 backdrop-blur border border-white/5;
+  }
+  html.light .glass-light {
+    background-color: #f0f2f8;
+    border-color: #e4e7ef;
+  }
+
+  .pill { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium; }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5
+           bg-gradient-to-b from-gold-400 to-gold-500 text-ink-950 font-medium
+           shadow-glow hover:from-gold-300 hover:to-gold-400 active:scale-[0.98]
+           transition disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5
+           bg-white/5 hover:bg-white/10 text-ink-100 border border-white/10 transition;
+  }
+  html.light .btn-ghost {
+    background-color: #eef0f6;
+    border-color: #d8dce6;
+    color: #2a3066;
+  }
+  html.light .btn-ghost:hover { background-color: #e0e4ee; }
+
+  .input {
+    @apply w-full rounded-lg bg-ink-900/60 border border-white/10
+           px-3.5 py-2.5 text-ink-50 placeholder:text-ink-400
+           focus:outline-none focus:ring-2 focus:ring-gold-400/50 focus:border-gold-400/30
+           transition;
+  }
+  html.light .input {
+    background-color: #ffffff;
+    border-color: #d8dce6;
+    color: #181d44;
+  }
+  html.light .input::placeholder { color: #8d96bf; }
+
+  .label { @apply block text-sm font-medium text-ink-200 mb-1.5; }
+  html.light .label { color: #2a3066; }
+
+  .gradient-text {
+    @apply bg-gradient-to-br from-gold-200 via-gold-400 to-gold-500
+           bg-clip-text text-transparent;
+  }
+  html.light .gradient-text {
+    @apply from-amber-600 via-amber-700 to-amber-800;
+  }
+
+  .divider { @apply h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent; }
+  html.light .divider { background-image: linear-gradient(to right, transparent, #d8dce6, transparent); }
+
+  /* ----------------------------------------------------------------------
+   * Markdown rendering for assistant messages
+   * --------------------------------------------------------------------- */
+  .markdown-body { @apply text-sm text-ink-100 leading-relaxed; }
+  .markdown-body > *:first-child { @apply mt-0; }
+  .markdown-body > *:last-child  { @apply mb-0; }
+  .markdown-body p { @apply my-2; }
+  .markdown-body strong { @apply text-gold-200 font-semibold; }
+  .markdown-body em { @apply text-ink-50 italic; }
+  .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+    @apply font-serif text-base text-ink-50 mt-3 mb-1.5;
+  }
+  .markdown-body ul { @apply list-none space-y-1 my-2 pl-0; }
+  .markdown-body ul > li { @apply pl-4 relative; }
+  .markdown-body ul > li::before {
+    content: '·';
+    @apply absolute left-1 text-gold-400;
+  }
+  .markdown-body ol { @apply list-decimal pl-5 space-y-1 my-2; }
+  .markdown-body ol > li::marker { color: rgb(230 178 45 / 0.9); }
+  .markdown-body code {
+    @apply px-1.5 py-0.5 rounded bg-ink-950/60 text-gold-200 text-[12px] font-mono;
+  }
+  .markdown-body pre {
+    @apply p-3 rounded-lg bg-ink-950/60 border border-white/5 text-xs overflow-x-auto my-2;
+  }
+  .markdown-body pre code { @apply bg-transparent p-0 text-ink-100; }
+  .markdown-body a { @apply text-gold-300 underline underline-offset-2 hover:text-gold-200; }
+  .markdown-body blockquote {
+    @apply border-l-2 border-gold-400/40 pl-3 italic text-ink-300 my-2;
+  }
+  .markdown-body hr { @apply my-3 border-white/5; }
+  .markdown-body table { @apply my-2 border-collapse w-full text-[12px]; }
+  .markdown-body th, .markdown-body td {
+    @apply px-2 py-1 border border-white/10 text-left;
+  }
+  .markdown-body th { @apply bg-white/5 text-ink-100 font-medium; }
+
+  html.light .markdown-body { color: #1f2452; }
+  html.light .markdown-body strong { color: #b45309; }
+  html.light .markdown-body em { color: #181d44; }
+  html.light .markdown-body h1,
+  html.light .markdown-body h2,
+  html.light .markdown-body h3 { color: #181d44; }
+  html.light .markdown-body code {
+    background-color: #f3f4f8;
+    color: #b45309;
+  }
+  html.light .markdown-body pre {
+    background-color: #f3f4f8;
+    border-color: #d8dce6;
+  }
+  html.light .markdown-body pre code { color: #1f2452; }
+  html.light .markdown-body a { color: #b45309; }
+  html.light .markdown-body a:hover { color: #92400e; }
+  html.light .markdown-body blockquote {
+    border-color: rgba(230, 178, 45, 0.6);
+    color: #4d5588;
+  }
+  html.light .markdown-body th { background-color: #f3f4f8; color: #2a3066; }
+  html.light .markdown-body th,
+  html.light .markdown-body td { border-color: #d8dce6; }
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(230, 178, 45, 0.35); }
+html.light ::-webkit-scrollbar-thumb { background: rgba(24, 29, 68, 0.15); }
+html.light ::-webkit-scrollbar-thumb:hover { background: rgba(230, 178, 45, 0.5); }

@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "description": "Labeled retrieval test set for Nyaya AI. Each item: a user query and the BNS section number(s) we expect to appear in the top-k citations.",
+  "cases": [
+    { "query": "What is the punishment for theft?",                        "expected_sections": ["303"] },
+    { "query": "Section 303",                                              "expected_sections": ["303"] },
+    { "query": "Someone broke into my house and stole my laptop",          "expected_sections": ["303", "329"] },
+    { "query": "What is house trespass?",                                  "expected_sections": ["329", "332"] },
+    { "query": "Punishment for robbery under BNS",                         "expected_sections": ["309"] },
+    { "query": "What is dacoity?",                                         "expected_sections": ["310"] },
+    { "query": "Define criminal intimidation",                             "expected_sections": ["351"] },
+    { "query": "Section 351 punishment",                                   "expected_sections": ["351"] },
+    { "query": "What is cheating in Indian law?",                          "expected_sections": ["318"] },
+    { "query": "Section 318 explained",                                    "expected_sections": ["318"] },
+    { "query": "Punishment for hurt",                                      "expected_sections": ["115"] },
+    { "query": "Grievous hurt section",                                    "expected_sections": ["116", "117"] },
+    { "query": "What is murder under BNS?",                                "expected_sections": ["103"] },
+    { "query": "Culpable homicide not amounting to murder",                "expected_sections": ["105"] },
+    { "query": "Punishment for rape",                                      "expected_sections": ["64"] },
+    { "query": "Sexual harassment section",                                "expected_sections": ["75"] },
+    { "query": "Cruelty by husband or relatives",                          "expected_sections": ["85", "86"] },
+    { "query": "Kidnapping for ransom",                                    "expected_sections": ["140"] },
+    { "query": "Defamation under Indian criminal law",                     "expected_sections": ["356"] },
+    { "query": "What is forgery?",                                         "expected_sections": ["336"] },
+    { "query": "Cyber stalking section",                                   "expected_sections": ["77", "78"] },
+    { "query": "What is criminal conspiracy?",                             "expected_sections": ["61"] },
+    { "query": "Punishment for abetment of suicide",                       "expected_sections": ["108"] },
+    { "query": "What constitutes affray?",                                 "expected_sections": ["194"] },
+    { "query": "Mischief by fire causing damage",                          "expected_sections": ["326"] }
+  ]
+}

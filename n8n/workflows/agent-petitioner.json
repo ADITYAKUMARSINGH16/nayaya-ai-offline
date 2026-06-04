@@ -1,0 +1,137 @@
+{
+  "name": "Nyaya AI — Petitioner Lawyer (sub-workflow demo)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-petitioner",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -500,
+        0
+      ],
+      "id": "wh",
+      "name": "Webhook (case_facts, legal_context)",
+      "webhookId": "agent-petitioner"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $json.body || $json;\nconst caseFacts    = (b.case_facts || '').slice(0, 2000);\nconst legalContext = (b.legal_context || '').slice(0, 1500);\nconst system = `You are a senior Indian petitioner-side advocate (BNS/BNSS/BSA 2023).\\nArgue strongly FOR the petitioner. Cite exact sections from the Legal Context.\\nConcise, courtroom-style, no markdown, no <think>.\\nReturn ONLY valid JSON: {\\\"opinion\\\": \\\"string\\\", \\\"arguments\\\": [\\\"string\\\"]}`;\nconst user = `CASE:\\n${caseFacts}\\n\\nLEGAL CONTEXT:\\n${legalContext}`;\nreturn [{ json: { system, user } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        0
+      ],
+      "id": "prompt",
+      "name": "Build prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/v1/chat/completions",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={ \"Content-Type\": \"application/json\" }",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.OLLAMA_MODEL || \"llama3.1\", response_format: { type: \"json_object\" }, messages: [   { role: \"system\", content: $json.system },   { role: \"user\",   content: $json.user } ]}) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -20,
+        0
+      ],
+      "id": "groq",
+      "name": "OpenAI chat.completions"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = (($json.choices || [])[0] || {}).message?.content || '{}';\nlet parsed; try { parsed = JSON.parse(raw); } catch { parsed = { opinion: '', arguments: [] }; }\nreturn [{ json: { opinion: parsed.opinion || '', arguments: parsed.arguments || [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "parse",
+      "name": "Parse JSON"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        460,
+        0
+      ],
+      "id": "respond",
+      "name": "Respond"
+    }
+  ],
+  "connections": {
+    "Webhook (case_facts, legal_context)": {
+      "main": [
+        [
+          {
+            "node": "Build prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build prompt": {
+      "main": [
+        [
+          {
+            "node": "OpenAI chat.completions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse JSON": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI chat.completions": {
+      "main": [
+        [
+          {
+            "node": "Parse JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "error-handler"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "error-handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [-300, 0],
+      "id": "err",
+      "name": "Error trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $json || {};\nconst wf = (e.workflow && e.workflow.name) || 'unknown';\nconst node = (e.execution && e.execution.lastNodeExecuted) || 'unknown';\nconst msg  = (e.execution && e.execution.error && e.execution.error.message) || 'no message';\nconst when = new Date().toISOString();\nreturn [{ json: {\n  level: 'error',\n  workflow: wf,\n  node,\n  message: msg,\n  when,\n  payload: { execId: e.execution?.id, retryOf: e.execution?.retryOf }\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-60, 0],
+      "id": "fmt",
+      "name": "Format error record"
+    },
+    {
+      "parameters": { "options": {} },
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "id": "notify",
+      "name": "Alert admin (wire Slack/Email)"
+    }
+  ],
+  "connections": {
+    "Error trigger":        { "main": [[{ "node": "Format error record", "type": "main", "index": 0 }]] },
+    "Format error record":  { "main": [[{ "node": "Alert admin (wire Slack/Email)", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

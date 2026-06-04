@@ -1,0 +1,93 @@
+name: nyaya-ai
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nyaya-backend
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app           # hot-reload in dev
+      - ./backend/scripts:/app/scripts   # build_graph etc.
+      - ./backend/eval:/app/eval         # eval runner + test cases
+      - ./backend/tests:/app/tests       # pytest suite
+      - ./data:/app/data                 # persisted legal_graph.json
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - nyaya
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPA_ANON_PUB: ${SUPABASE_ANON_KEY}
+    container_name: nyaya-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - nyaya
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: nyaya-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Asia/Kolkata
+      - N8N_RUNNERS_ENABLED=false
+      # Passed through to workflows via $env.* — used by the cron + agent flows
+      - ADMIN_INTERNAL_KEY=${ADMIN_INTERNAL_KEY:-change-me}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      # Allow workflows to read process.env via the {{ $env.* }} expression.
+      # n8n blocks this by default for security; we trust our own workflows here.
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows
+    restart: unless-stopped
+    networks:
+      - nyaya
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: nyaya-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+    networks:
+      - nyaya
+
+
+volumes:
+  n8n_data:
+  qdrant_data:
+
+networks:
+  nyaya:
+    driver: bridge

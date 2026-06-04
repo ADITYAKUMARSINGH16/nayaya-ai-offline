@@ -1,0 +1,29 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+httpx==0.27.2
+python-dotenv==1.0.1
+supabase>=2.11.0
+qdrant-client==1.8.0
+pinecone>=6.0.0
+# PyMuPDF: layout-aware PDF extraction with word-level bbox info.
+# Used to split gazette PDFs into marginalia (left column = section titles)
+# and body (right column = section text) before regex parsing.
+pymupdf==1.24.13
+
+# Hybrid retrieval
+rank-bm25==0.2.2
+
+# LightRAG knowledge graph (in-memory traversal over SQLite-backed entities)
+networkx==3.4.2
+
+# Auth (Supabase JWT verification)
+python-jose[cryptography]==3.3.0
+
+# Streaming responses
+sse-starlette==2.1.3
+
+# Tests
+pytest==8.3.4
+pytest-asyncio==0.24.0

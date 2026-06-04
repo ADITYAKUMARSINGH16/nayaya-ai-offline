@@ -1,0 +1,39 @@
+/* Print stylesheet — clean A4 output for FIRs and judgments. */
+
+@media print {
+  body { background: white !important; color: #111 !important; }
+
+  /* Hide app chrome */
+  header, nav, aside, .no-print { display: none !important; }
+
+  /* Reset glass + dark surfaces for print */
+  .glass, .glass-light, .input { background: white !important; border: none !important; box-shadow: none !important; }
+
+  /* Limit to the printable region */
+  .print-only { display: block !important; }
+  .print-page {
+    background: white !important;
+    color: #111 !important;
+    padding: 24mm 20mm !important;
+    max-width: 210mm;
+    margin: 0 auto;
+    font-family: 'Cormorant Garamond', Georgia, serif !important;
+  }
+  .print-page h1, .print-page h2, .print-page h3 {
+    color: #111 !important; font-weight: 600;
+  }
+  .print-page pre {
+    white-space: pre-wrap;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 11pt;
+    color: #111 !important;
+  }
+  .print-page .meta {
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 8mm;
+    margin-bottom: 8mm;
+  }
+}
+
+/* On screen, the print-only blocks are hidden */
+.print-only { display: none; }

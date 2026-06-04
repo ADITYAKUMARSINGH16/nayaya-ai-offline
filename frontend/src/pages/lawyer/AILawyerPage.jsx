@@ -1,0 +1,141 @@
+import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { AlertCircle, Scale, Shield, Sparkles, CheckCircle, Lightbulb, Clock } from 'lucide-react'
+
+import Card, { CardHeader } from '@/components/ui/Card'
+import Spinner from '@/components/ui/Spinner'
+import { api } from '@/api/client'
+import ConversationsSidebar from '@/components/ConversationsSidebar'
+
+export default function AILawyerPage() {
+  const [caseFacts, setCaseFacts] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [analysis, setAnalysis] = useState(null)
+  const [error, setError] = useState('')
+  const [sessionId, setSessionId] = useState(null)
+
+  const handleSelectHistory = async (id) => {
+    setSessionId(id)
+    try {
+      const res = await api.getConversation(id)
+      const messages = res.messages || []
+      const userMsg = messages.find(m => m.role === 'user')
+      const assistantMsg = messages.find(m => m.role === 'assistant')
+      
+      if (userMsg) setCaseFacts(userMsg.message)
+      if (assistantMsg) {
+        try {
+          setAnalysis(JSON.parse(assistantMsg.message))
+        } catch (e) {
+          console.error("Failed to parse history JSON", e)
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load history", err)
+    }
+  }
+
+  const handleNew = () => {
+    setSessionId(null)
+    setCaseFacts('')
+    setAnalysis(null)
+    setError('')
+  }
+
+  const handleAnalyze = async () => {
+    if (!caseFacts.trim()) return
+    setLoading(true)
+    setError('')
+    setAnalysis(null)
+    try {
+      const data = await api.lawyerAnalyze({ caseFacts })
+      setAnalysis(data)
+    } catch (err) {
+      console.error("Analyze error:", err)
+      setError(err.message || 'Failed to analyze case')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex gap-4 h-[calc(100vh-9rem)]">
+      <ConversationsSidebar
+        activeId={sessionId}
+        onSelect={handleSelectHistory}
+        onNew={handleNew}
+        category="lawyer"
+      />
+
+      <div className="flex-1 min-w-0 overflow-y-auto pr-1 space-y-6 pb-8">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="font-serif text-3xl">AI Lawyer Analysis</h1>
+          <p className="text-ink-400 mt-1">Generate strategic analysis, identify weaknesses, and prepare for trial.</p>
+        </motion.div>
+
+      <Card>
+        <CardHeader icon={Scale} title="Case Facts" />
+        <div className="p-4 space-y-4">
+          <textarea
+            value={caseFacts}
+            onChange={(e) => setCaseFacts(e.target.value)}
+            className="w-full h-32 rounded-xl bg-ink-900 border border-white/10 p-3 text-sm focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/50 outline-none"
+            placeholder="Paste case facts, FIR details, or investigation reports here..."
+          />
+          <button
+            onClick={handleAnalyze}
+            disabled={loading || !caseFacts.trim()}
+            className="w-full sm:w-auto px-6 py-2 rounded-xl bg-gold-500 text-ink-950 font-medium disabled:opacity-50 hover:bg-gold-400 transition"
+          >
+            {loading ? <Spinner className="w-5 h-5 mx-auto" /> : 'Analyze Case'}
+          </button>
+          {error && <div className="text-red-400 text-sm mt-2">{error}</div>}
+        </div>
+      </Card>
+
+      {analysis && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <Card>
+            <CardHeader icon={Lightbulb} title="Recommended Strategy" />
+            <div className="p-4 text-sm leading-relaxed">{analysis.strategy}</div>
+          </Card>
+          
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader icon={CheckCircle} title="Strengths" />
+              <ul className="p-4 space-y-2 text-sm">
+                {analysis.strengths.map((s, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="text-gold-400">•</span> <span>{s}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+            <Card>
+              <CardHeader icon={AlertCircle} title="Weaknesses" />
+              <ul className="p-4 space-y-2 text-sm">
+                {analysis.weaknesses.map((w, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="text-red-400">•</span> <span>{w}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader icon={Shield} title="Evidence Needed" />
+            <ul className="p-4 space-y-2 text-sm">
+              {analysis.evidence_needed.map((e, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="text-blue-400">•</span> <span>{e}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </motion.div>
+      )}
+      </div>
+    </div>
+  )
+}

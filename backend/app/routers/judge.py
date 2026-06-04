@@ -1,0 +1,95 @@
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+
+from app.core.security import CurrentUser, require_judge
+from app.schemas import models
+from app.services import db
+
+router = APIRouter(prefix="/judge", tags=["judge"])
+
+
+@router.post("/analyze", response_model=models.JudgeAnalysisResponse)
+async def analyze_case(
+    req: models.InvestigationRequest,
+    user: Annotated[CurrentUser, Depends(require_judge)],
+):
+    """Judge preliminary case analysis."""
+    from app.services.rag import retrieve_context
+    from app.agents.verifier import verify_text
+    from app.core.llm import get_llm
+    from app.prompts.templates import JUDGE_ANALYSIS
+    import uuid
+    import json
+
+    # 1. Retrieve sections
+    rag = await retrieve_context(req.case_facts, top_k=6, intent_hint="APPLY_FACTS")
+    ctx = rag["context"]
+
+    # 2. Complete with LLM
+    data = await get_llm().complete_json(
+        [
+            {"role": "system", "content": JUDGE_ANALYSIS},
+            {"role": "user", "content": f"CASE FACTS:\n{req.case_facts}\n\nLEGAL CONTEXT:\n{ctx}"},
+        ],
+        temperature=0.2,
+    )
+    
+    # 3. Verify citations
+    blob = " ".join(data.get("legal_questions", []) + data.get("admissibility_issues", []) + data.get("potential_liabilities", []))
+    citations = await verify_text(blob)
+    
+    session_id = f"judge_{uuid.uuid4().hex}"
+    try:
+        db.save_message(session_id, user.id, "user", req.case_facts, {"type": "judge_analysis"})
+        db.save_message(session_id, user.id, "assistant", json.dumps(data), {"type": "judge_analysis"})
+    except Exception:
+        pass
+
+    return models.JudgeAnalysisResponse(
+        legal_questions=data.get("legal_questions", []),
+        admissibility_issues=data.get("admissibility_issues", []),
+        potential_liabilities=data.get("potential_liabilities", []),
+        citations=citations,
+        session_id=session_id,
+    )
+
+
+class VerdictOverrideRequest(BaseModel):
+    verdict: dict[str, Any]
+    status: str  # approved, rejected, modified
+
+
+@router.get("/cases")
+async def get_judge_cases(
+    user: Annotated[CurrentUser, Depends(require_judge)],
+):
+    """Get all cases for the judge dashboard."""
+    cases = db.list_all_cases()
+    return cases
+
+
+@router.post("/cases/{case_id}/claim")
+async def claim_case(
+    case_id: str,
+    user: Annotated[CurrentUser, Depends(require_judge)],
+):
+    """Assign case to the current judge."""
+    updated = db.assign_case(case_id, "judge", user.id)
+    return updated
+
+
+@router.post("/cases/{case_id}/verdict")
+async def submit_verdict(
+    case_id: str,
+    req: VerdictOverrideRequest,
+    user: Annotated[CurrentUser, Depends(require_judge)],
+):
+    """Approve or override the AI verdict."""
+    case = db.get_case(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+        
+    updated = db.submit_human_verdict(case_id, req.verdict, req.status)
+    return updated
