@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { X, Scale } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, MessagesSquare, FileText, ShieldAlert, Gavel, History, BarChart3,
+  LayoutDashboard, MessagesSquare, FileText, ShieldAlert, Gavel, History, BarChart3, BookOpen
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +15,7 @@ const NAV = [
   { to: '/app/investigation', label: 'Investigation', icon: ShieldAlert },
   { to: '/app/trial',         label: 'Courtroom',     icon: Gavel },
   { to: '/app/cases',         label: 'Case History',  icon: History },
+  { to: '/app/bare-acts',     label: 'Bare Acts',     icon: BookOpen },
   { to: '/app/eval',          label: 'Eval Dashboard',icon: BarChart3 },
 ]
 

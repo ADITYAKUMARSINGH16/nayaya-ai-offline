@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, MessagesSquare, FileText, ShieldAlert, Gavel,
-  History, Scale, BarChart3, PanelLeftClose, PanelLeftOpen,
+  History, Scale, BarChart3, PanelLeftClose, PanelLeftOpen, BookOpen
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -14,6 +14,7 @@ const NAV = [
   { to: '/app/investigation',label: 'Investigation', icon: ShieldAlert },
   { to: '/app/trial',        label: 'Courtroom',     icon: Gavel },
   { to: '/app/cases',        label: 'Case History',  icon: History },
+  { to: '/app/bare-acts',    label: 'Bare Acts',     icon: BookOpen },
   { to: '/app/eval',         label: 'Evaluation',    icon: BarChart3 },
 ]
 
@@ -28,6 +29,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       { to: '/app/lawyer/ai',    label: 'AI Lawyer',     icon: MessagesSquare },
       { to: '/app/cases',        label: 'Case Files',    icon: FileText },
       { to: '/app/trial',        label: 'Courtroom',     icon: Gavel },
+      { to: '/app/bare-acts',    label: 'Bare Acts',     icon: BookOpen },
       { to: '/app/eval',         label: 'Evaluation',    icon: BarChart3 },
     ]
   } else if (user?.role === 'judge') {
@@ -38,6 +40,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       { to: '/app/investigation',label: 'Investigation',   icon: ShieldAlert },
       { to: '/app/trial',        label: 'Courtroom',       icon: Gavel },
       { to: '/app/cases',        label: 'Case History',    icon: History },
+      { to: '/app/bare-acts',    label: 'Bare Acts',     icon: BookOpen },
       { to: '/app/eval',         label: 'Evaluation',      icon: BarChart3 },
     ]
   }

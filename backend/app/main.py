@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import (
-    admin, assistant, cases,    conversations,
+    admin, assistant, bare_acts, cases, conversations,
     evaluation,
     evidence,
     fir,
@@ -33,6 +33,7 @@ app.add_middleware(
 API = "/api"
 app.include_router(health.router,     prefix=API)
 app.include_router(assistant.router,  prefix=API)
+app.include_router(bare_acts.router,  prefix=API)
 app.include_router(fir.router,        prefix=API)
 app.include_router(cases.router, prefix="/api")
 app.include_router(judgments.router, prefix="/api")

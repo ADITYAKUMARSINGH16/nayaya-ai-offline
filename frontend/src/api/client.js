@@ -92,6 +92,15 @@ export const api = {
   adminGetFirs: () => request('/api/admin/firs'),
   adminGetCases: () => request('/api/admin/cases'),
   adminOverrideFirStatus: (firId, status) => request(`/api/admin/firs/${firId}/status`, { method: 'POST', body: { status } }),
+
+  // Bare Acts
+  bareActsList: () => request('/api/bare-acts/'),
+  bareActsSearch: (q, act) => {
+    const params = new URLSearchParams({ q })
+    if (act) params.set('act', act)
+    return request(`/api/bare-acts/search?${params.toString()}`)
+  },
+  bareActsGet: (act) => request(`/api/bare-acts/${act}`),
 }
 
 /**

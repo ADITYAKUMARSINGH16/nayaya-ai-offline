@@ -22,6 +22,7 @@ import JudgeRoute from '@/components/JudgeRoute'
 import AILawyerPage from '@/pages/lawyer/AILawyerPage'
 import JudgeDashboardPage from '@/pages/judge/JudgeDashboardPage'
 import AIJudgePage from '@/pages/judge/AIJudgePage'
+import BareActsPage from '@/pages/BareActsPage'
 
 export default function App() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="investigation" element={<PolicePage />} />
         <Route path="trial" element={<TrialPage />} />
         <Route path="cases" element={<CaseHistoryPage />} />
+        <Route path="bare-acts" element={<BareActsPage />} />
         <Route path="eval" element={<EvalDashboardPage />} />
         
         <Route path="admin" element={

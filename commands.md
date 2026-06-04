@@ -51,3 +51,8 @@ docker restart nyaya-backend
 docker compose up -d --build backend
 
 docker compose up -d --build frontend
+
+
+
+for evaluation run this command
+docker compose exec backend python -m eval.runner

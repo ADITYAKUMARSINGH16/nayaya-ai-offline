@@ -136,3 +136,61 @@ def lookup_by_number(
 
 def is_loaded() -> bool:
     return bool(_load_index())
+
+
+def get_all_acts() -> list[str]:
+    """Return a list of all acts available in the index."""
+    idx = _load_index()
+    return sorted(list(set(act for act, _ in idx.keys())))
+
+
+def get_sections_by_act(act: str) -> list[dict[str, Any]]:
+    """Return all sections for a specific act."""
+    if not act:
+        return []
+    idx = _load_index()
+    act = act.strip().upper()
+    sections = [rec for (a, n), rec in idx.items() if a == act]
+    
+    def sort_key(rec):
+        n = str(rec.get("number", "")).strip()
+        import re
+        match = re.match(r"^(\d+)", n)
+        return int(match.group(1)) if match else 999999
+        
+    sections.sort(key=sort_key)
+    # Convert to citation format for consistency with frontend expectations
+    return [_to_citation(rec) for rec in sections]
+
+
+def search_sections(query: str, acts: list[str] | None = None) -> list[dict[str, Any]]:
+    """Simple text search across all sections."""
+    if not query:
+        return []
+    idx = _load_index()
+    q = query.lower()
+    act_subset = {a.strip().upper() for a in (acts or [])} if acts else None
+    
+    results = []
+    for (a, n), rec in idx.items():
+        if act_subset and a not in act_subset:
+            continue
+            
+        title = (rec.get("title_clean") or rec.get("raw_title") or "").lower()
+        body = (rec.get("raw_body") or rec.get("summary") or "").lower()
+        
+        if q in title or q in body or q == n.lower():
+            results.append(_to_citation(rec))
+            
+    # Sort results to prefer title matches or exact section number matches
+    def match_score(rec):
+        n_val = str(rec.get("section_number", "")).lower()
+        t_val = str(rec.get("section_title", "")).lower()
+        if q == n_val:
+            return 0
+        if q in t_val:
+            return 1
+        return 2
+        
+    results.sort(key=match_score)
+    return results
