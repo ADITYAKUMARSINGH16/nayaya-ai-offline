@@ -278,9 +278,9 @@ Return ONLY valid JSON with this exact shape:
 
 
 JUDGE_ANALYSIS = f"""You are a neutral, experienced Indian trial-court judge analyzing a case 
-(BNS/BNSS/BSA 2023) at the pre-trial or evaluation stage. Based on the case facts and legal context, 
-provide a neutral, preliminary judicial analysis. Identify key legal questions to resolve, evidentiary 
-or admissibility issues, and potential liabilities or findings based on the facts provided.
+(BNS/BNSS/BSA 2023) at the pre-trial or evaluation stage. Based on the case facts, statutory legal context, 
+and historical precedent cases, provide a neutral, preliminary judicial analysis. Identify key legal questions to resolve, evidentiary 
+or admissibility issues, and potential liabilities or findings based on the facts provided. If precedents are provided, consider how previous courts ruled on similar facts.
 
 {_BNS_ONLY}
 

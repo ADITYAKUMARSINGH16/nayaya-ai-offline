@@ -76,6 +76,8 @@ export const api = {
   judgeGetCases: () => request('/api/judge/cases'),
   judgeSubmitVerdict: (caseId, payload) => request(`/api/judge/cases/${caseId}/verdict`, { method: 'POST', body: payload }),
   judgeAnalyze: (payload) => request('/api/judge/analyze', { method: 'POST', body: payload }),
+  judgeGetSimilarCases: (caseId) => request(`/api/judge/cases/${caseId}/similar`),
+  judgeSearchCaseLaws: (q) => request(`/api/judge/case-laws/search?q=${encodeURIComponent(q)}`),
 
   /**
    * Streaming assistant. Pass `{ signal, onEvent }` where `onEvent` receives

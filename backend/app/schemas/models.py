@@ -140,9 +140,19 @@ class LawyerAnalysisResponse(BaseModel):
 
 # ---- judge analysis -----------------------------------------------------
 
+class SimilarCase(BaseModel):
+    title: str = ""
+    court: str = ""
+    year: str = ""
+    disposition: str = ""
+    snippet: str = ""
+    text: str = ""
+    score: float | None = None
+
 class JudgeAnalysisResponse(BaseModel):
     legal_questions: list[str] = []
     admissibility_issues: list[str] = []
     potential_liabilities: list[str] = []
     citations: list[Citation] = []
+    similar_cases: list[SimilarCase] = []
     session_id: str | None = None

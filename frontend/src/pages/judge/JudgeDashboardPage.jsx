@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Gavel, Check, X, FileText, Clock } from 'lucide-react'
+import { Gavel, Check, X, FileText, Clock, Landmark } from 'lucide-react'
 
 import Card, { CardHeader } from '@/components/ui/Card'
 import Spinner from '@/components/ui/Spinner'
+import CaseModal from '@/components/CaseModal'
 import { api } from '@/api/client'
 
 export default function JudgeDashboardPage() {
@@ -13,6 +14,9 @@ export default function JudgeDashboardPage() {
   const [overrideVerdict, setOverrideVerdict] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState('pending') // 'pending' or 'history'
+  const [similarCases, setSimilarCases] = useState(null)
+  const [loadingSimilar, setLoadingSimilar] = useState(false)
+  const [activeCaseModal, setActiveCaseModal] = useState(null)
 
   const renderOutput = (data, fallback = 'No data found.') => {
     if (!data) return fallback;
@@ -47,6 +51,25 @@ export default function JudgeDashboardPage() {
     fetchCases()
   }, [])
 
+  useEffect(() => {
+    if (!selectedCase) {
+      setSimilarCases(null)
+      return
+    }
+    const fetchSimilar = async () => {
+      setLoadingSimilar(true)
+      try {
+        const data = await api.judgeGetSimilarCases(selectedCase.id)
+        setSimilarCases(data)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoadingSimilar(false)
+      }
+    }
+    fetchSimilar()
+  }, [selectedCase])
+
   const pendingCases = allCases.filter(c => c.status === 'trial' || c.status === 'awaiting_verdict')
   const historyCases = allCases.filter(c => c.status === 'closed')
 
@@ -76,9 +99,9 @@ export default function JudgeDashboardPage() {
   if (loading) return <Spinner label="Loading cases..." className="mt-20 mx-auto" />
 
   return (
-    <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
+    <div className="max-w-[90rem] mx-auto flex flex-col lg:flex-row gap-6 items-start">
       {/* List of cases */}
-      <div className="md:w-1/3 space-y-4">
+      <div className="lg:w-80 shrink-0 space-y-4">
         <div className="flex gap-4 mb-4 border-b border-white/10 pb-2">
           <button
             onClick={() => { setActiveTab('pending'); setSelectedCase(null) }}
@@ -117,7 +140,7 @@ export default function JudgeDashboardPage() {
       </div>
 
       {/* Case Details & Action */}
-      <div className="md:w-2/3">
+      <div className="flex-1 min-w-0">
         {selectedCase ? (
           <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
             <Card>
@@ -215,6 +238,54 @@ export default function JudgeDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Similar Cases Sidebar */}
+      {selectedCase && (
+        <div className="lg:w-[340px] shrink-0 sticky top-6">
+          <Card className="overflow-hidden flex flex-col max-h-[calc(100vh-6rem)]">
+            <CardHeader title="Similar Cases" subtitle="Historical precedents" />
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1 pb-4">
+              {loadingSimilar ? (
+                <div className="flex justify-center p-4"><Spinner /></div>
+              ) : !similarCases?.length ? (
+                <p className="text-sm text-ink-400">
+                  Similar historical cases will appear here.
+                </p>
+              ) : (
+                similarCases.map((sc, i) => (
+                  <div key={i} className="p-3 rounded-xl bg-ink-950/50 border border-white/5 space-y-2">
+                    <div className="flex justify-between items-start gap-2">
+                      <h4 className="font-medium text-gold-100 text-sm">{sc.title}</h4>
+                      <span className="text-[10px] text-ink-400 shrink-0 bg-ink-900 px-1.5 py-0.5 rounded-md">
+                        {sc.year}
+                      </span>
+                    </div>
+                    {sc.disposition && (
+                      <div className="text-xs">
+                        <span className="text-gold-500 font-medium">Verdict: </span>
+                        <span className="text-ink-200">{sc.disposition}</span>
+                      </div>
+                    )}
+                    <p className="text-xs text-ink-400 line-clamp-3">{sc.snippet}</p>
+                    <button
+                      onClick={() => setActiveCaseModal(sc)}
+                      className="text-xs font-medium text-gold-400 hover:text-gold-300 underline underline-offset-2 mt-1 inline-block"
+                    >
+                      View full case
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Case Modal */}
+      <CaseModal 
+        caseData={activeCaseModal} 
+        onClose={() => setActiveCaseModal(null)} 
+      />
     </div>
   )
 }

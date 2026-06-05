@@ -23,6 +23,7 @@ import AILawyerPage from '@/pages/lawyer/AILawyerPage'
 import JudgeDashboardPage from '@/pages/judge/JudgeDashboardPage'
 import AIJudgePage from '@/pages/judge/AIJudgePage'
 import BareActsPage from '@/pages/BareActsPage'
+import CaseLawsPage from '@/pages/judge/CaseLawsPage'
 
 export default function App() {
   return (
@@ -76,6 +77,11 @@ export default function App() {
         <Route path="judge/ai" element={
           <JudgeRoute>
             <AIJudgePage />
+          </JudgeRoute>
+        } />
+        <Route path="judge/case-laws" element={
+          <JudgeRoute>
+            <CaseLawsPage />
           </JudgeRoute>
         } />
       </Route>

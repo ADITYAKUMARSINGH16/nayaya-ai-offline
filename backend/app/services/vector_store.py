@@ -56,6 +56,18 @@ async def search_sections(
             query, top_k=top_k, section_number=section_number, filters=filters, acts=acts
         )
 
+async def search_case_laws(
+    query: str,
+    *,
+    top_k: int = 3,
+) -> list[dict[str, Any]]:
+    """Return relevant historical cases from the case_laws vector store."""
+    provider = (settings.vector_store_provider or "qdrant").lower()
+    if provider == "pinecone":
+        return await _search_case_laws_pinecone(query, top_k=top_k)
+    else:
+        return await _search_case_laws_qdrant(query, top_k=top_k)
+
 
 async def _search_sections_qdrant(
     query: str,
@@ -170,5 +182,76 @@ async def _search_sections_pinecone(
         })
         if len(out) >= top_k:
             break
+    return out
+
+
+async def _search_case_laws_qdrant(query: str, top_k: int = 3) -> list[dict[str, Any]]:
+    from qdrant_client.http import models
+    client = _qdrant_client()
+    
+    if not query.strip():
+        vector = [1e-6] * settings.embeddings_dim
+    else:
+        vector = await embed_text(query)
+
+    try:
+        result = client.search(
+            collection_name=settings.qdrant_case_laws_collection,
+            query_vector=vector,
+            limit=top_k,
+            with_payload=True
+        )
+    except Exception:
+        return [] # Collection might not exist yet
+
+    out: list[dict[str, Any]] = []
+    for m in result:
+        payload = m.payload or {}
+        out.append({
+            "score": m.score,
+            "title": payload.get("title", ""),
+            "court": payload.get("court", ""),
+            "year": payload.get("year", ""),
+            "disposition": payload.get("disposition", ""),
+            "snippet": payload.get("snippet", ""),
+            "text": payload.get("text", ""),
+        })
+    return out
+
+
+async def _search_case_laws_pinecone(query: str, top_k: int = 3) -> list[dict[str, Any]]:
+    from pinecone import Pinecone
+    pc = Pinecone(api_key=settings.pinecone_api_key)
+    try:
+        index = pc.Index(settings.pinecone_case_laws_index)
+    except Exception:
+        return []
+        
+    if not query.strip():
+        vector = [1e-6] * settings.embeddings_dim
+    else:
+        vector = await embed_text(query)
+
+    try:
+        res = index.query(
+            vector=vector,
+            top_k=top_k,
+            include_metadata=True,
+        )
+    except Exception:
+        return []
+
+    out: list[dict[str, Any]] = []
+    for m in (res.matches or []):
+        meta = m.metadata or {}
+        out.append({
+            "score": m.score,
+            "title": meta.get("title", ""),
+            "court": meta.get("court", ""),
+            "year": meta.get("year", ""),
+            "disposition": meta.get("disposition", ""),
+            "snippet": meta.get("snippet", ""),
+            "text": meta.get("text", ""),
+        })
     return out
 

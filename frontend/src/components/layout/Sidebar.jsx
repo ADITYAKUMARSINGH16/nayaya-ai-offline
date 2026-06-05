@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, MessagesSquare, FileText, ShieldAlert, Gavel,
-  History, Scale, BarChart3, PanelLeftClose, PanelLeftOpen, BookOpen
+  History, Scale, BarChart3, PanelLeftClose, PanelLeftOpen, BookOpen, Landmark
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -41,6 +41,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       { to: '/app/trial',        label: 'Courtroom',       icon: Gavel },
       { to: '/app/cases',        label: 'Case History',    icon: History },
       { to: '/app/bare-acts',    label: 'Bare Acts',     icon: BookOpen },
+      { to: '/app/judge/case-laws', label: 'Supreme Court Cases', icon: Landmark },
       { to: '/app/eval',         label: 'Evaluation',      icon: BarChart3 },
     ]
   }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Scale, FileText, ChevronRight, Gavel, CheckCircle2, Clock } from 'lucide-react'
+import { Scale, FileText, ChevronRight, Gavel, CheckCircle2, Clock, Landmark } from 'lucide-react'
 
 import { api } from '@/api/client'
 import Card, { CardHeader } from '@/components/ui/Card'
@@ -155,26 +155,29 @@ export default function AIJudgePage() {
                     {analysis.potential_liabilities.length === 0 && <span className="text-ink-500">None identified.</span>}
                   </ul>
                 </Card>
+
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        <Card className="overflow-hidden flex flex-col h-full">
-          <CardHeader title="Citations" subtitle="Sections retrieved & graph-expanded" />
-          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-            {!analysis?.citations?.length ? (
-              <p className="text-sm text-ink-400">
-                Citations from the legal database will appear here once you analyze a case.
-              </p>
-            ) : (
-              analysis.citations.map((c, i) => (
-                <CitationCard key={i} citation={c} onClick={setActiveCitation} />
-              ))
-            )}
-          </div>
-          <Disclaimer className="mt-4" />
-        </Card>
+        <div className="flex flex-col gap-4 h-full overflow-hidden">
+          <Card className="overflow-hidden flex flex-col flex-1 min-h-0">
+            <CardHeader title="Citations" subtitle="Bare acts retrieved" />
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {!analysis?.citations?.length ? (
+                <p className="text-sm text-ink-400">
+                  Citations from the legal database will appear here once you analyze a case.
+                </p>
+              ) : (
+                analysis.citations.map((c, i) => (
+                  <CitationCard key={i} citation={c} onClick={setActiveCitation} />
+                ))
+              )}
+            </div>
+            <Disclaimer className="mt-4" />
+          </Card>
+        </div>
       </div>
 
       <CitationModal

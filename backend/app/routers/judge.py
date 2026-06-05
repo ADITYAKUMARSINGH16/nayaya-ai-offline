@@ -23,15 +23,26 @@ async def analyze_case(
     import uuid
     import json
 
-    # 1. Retrieve sections
+    # 1. Retrieve statutory context
     rag = await retrieve_context(req.case_facts, top_k=6, intent_hint="APPLY_FACTS")
     ctx = rag["context"]
+
+    # 1b. Retrieve historical case laws
+    from app.services.vector_store import search_case_laws
+    similar_cases_data = await search_case_laws(req.case_facts, top_k=3)
+    
+    cases_context = "NO HISTORICAL PRECEDENTS FOUND."
+    if similar_cases_data:
+        cases_context = "\n\n".join(
+            f"Case: {c['title']} ({c['year']}) - {c['court']}\nDisposition: {c['disposition']}\nSummary: {c['snippet']}"
+            for c in similar_cases_data
+        )
 
     # 2. Complete with LLM
     data = await get_llm().complete_json(
         [
             {"role": "system", "content": JUDGE_ANALYSIS},
-            {"role": "user", "content": f"CASE FACTS:\n{req.case_facts}\n\nLEGAL CONTEXT:\n{ctx}"},
+            {"role": "user", "content": f"CASE FACTS:\n{req.case_facts}\n\nSTATUTORY LAW:\n{ctx}\n\nPRECEDENT CASES:\n{cases_context}"},
         ],
         temperature=0.2,
     )
@@ -52,6 +63,7 @@ async def analyze_case(
         admissibility_issues=data.get("admissibility_issues", []),
         potential_liabilities=data.get("potential_liabilities", []),
         citations=citations,
+        similar_cases=similar_cases_data,
         session_id=session_id,
     )
 
@@ -93,3 +105,40 @@ async def submit_verdict(
         
     updated = db.submit_human_verdict(case_id, req.verdict, req.status)
     return updated
+
+
+@router.get("/cases/{case_id}/similar", response_model=list[models.SimilarCase])
+async def get_similar_cases(
+    case_id: str,
+    user: Annotated[CurrentUser, Depends(require_judge)],
+):
+    """Get similar cases for a pending verdict case."""
+    from app.services.vector_store import search_case_laws
+    
+    case = db.get_case(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+        
+    facts = case.get("question", "")
+    if not facts:
+        return []
+        
+    similar_cases_data = await search_case_laws(facts, top_k=3)
+    return similar_cases_data
+
+
+@router.get("/case-laws/search", response_model=list[models.SimilarCase])
+async def search_supreme_court_cases(
+    q: str,
+    user: Annotated[CurrentUser, Depends(require_judge)],
+):
+    """Search historical Supreme Court case laws."""
+    from app.services.vector_store import search_case_laws
+    
+    if not q.strip():
+        # Return default recent cases to populate Table of Contents
+        results = await search_case_laws("", top_k=20)
+        return results
+        
+    results = await search_case_laws(q, top_k=20)
+    return results

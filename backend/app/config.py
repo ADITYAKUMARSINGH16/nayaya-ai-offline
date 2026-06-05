@@ -39,8 +39,10 @@ class Settings(BaseSettings):
     qdrant_url: str = "http://qdrant:6333"
     qdrant_api_key: str = ""
     qdrant_collection: str = "rag-legal"
+    qdrant_case_laws_collection: str = "case-laws"
     pinecone_api_key: str = ""
     pinecone_index: str = "rag-legal"
+    pinecone_case_laws_index: str = "case-laws"
     pinecone_host: str = ""
 
     # Supabase
