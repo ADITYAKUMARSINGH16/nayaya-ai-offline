@@ -10,6 +10,8 @@ import Badge from '@/components/ui/Badge'
 import MessageBubble from '@/components/MessageBubble'
 import CitationCard from '@/components/CitationCard'
 import CitationModal from '@/components/CitationModal'
+import SimilarCaseCard from '@/components/SimilarCaseCard'
+import SimilarCaseModal from '@/components/SimilarCaseModal'
 import EmptyState from '@/components/ui/EmptyState'
 import Disclaimer from '@/components/Disclaimer'
 import ConversationsSidebar from '@/components/ConversationsSidebar'
@@ -41,6 +43,8 @@ export default function AssistantPage() {
   const [lowConfidence, setLowConfidence] = useState(false)
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [activeCitation, setActiveCitation] = useState(null)
+  const [similarCases, setSimilarCases] = useState([])
+  const [activeSimilarCase, setActiveSimilarCase] = useState(null)
   const endRef = useRef(null)
   const abortRef = useRef(null)
 
@@ -65,6 +69,7 @@ export default function AssistantPage() {
       setLoadingHistory(true)
       setMessages([])
       setCitations([])
+      setSimilarCases([])
       setLowConfidence(false)
       abortRef.current?.abort()
       try {
@@ -81,6 +86,14 @@ export default function AssistantPage() {
         if (lastWithMeta) {
           setCitations(lastWithMeta.metadata.citations)
           setLowConfidence(Boolean(lastWithMeta.metadata.low_confidence))
+        }
+
+        // Fetch similar cases for the last user message if exists
+        const lastUserMsg = [...msgs].reverse().find(m => m.role === 'user')
+        if (lastUserMsg) {
+          api.judgeSearchCaseLaws(lastUserMsg.message)
+            .then(sc => { if (alive) setSimilarCases(sc || []) })
+            .catch(() => {})
         }
       } catch {
         // Anonymous / empty session — nothing to load.
@@ -102,8 +115,14 @@ export default function AssistantPage() {
     setInput('')
     setMessages((m) => [...m, { role: 'user', content: value }, { role: 'assistant', content: '' }])
     setCitations([])
+    setSimilarCases([])
     setLowConfidence(false)
     setStreaming(true)
+
+    // Fetch similar cases in parallel
+    api.judgeSearchCaseLaws(value)
+      .then(sc => setSimilarCases(sc || []))
+      .catch(err => console.error("Failed to fetch similar cases", err))
 
     const controller = new AbortController()
     abortRef.current = controller
@@ -143,6 +162,7 @@ export default function AssistantPage() {
     setSessionId(fresh)
     setMessages([])
     setCitations([])
+    setSimilarCases([])
     setLowConfidence(false)
     setInput('')
   }, [])
@@ -229,29 +249,51 @@ export default function AssistantPage() {
           </form>
         </Card>
 
-        <Card className="overflow-hidden flex flex-col">
-          <CardHeader title="Citations" subtitle="Sections retrieved & graph-expanded" />
-          {lowConfidence && (
-            <Badge tone="red" className="mb-3">Low confidence — retrieval was weak</Badge>
-          )}
-          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-            {citations.length === 0 ? (
-              <p className="text-sm text-ink-400">
-                Citations from the legal database will appear here once you ask a question.
-              </p>
-            ) : (
-              citations.map((c, i) => (
-                <CitationCard key={i} citation={c} onClick={setActiveCitation} />
-              ))
+        <div className="flex flex-col gap-4 h-full overflow-y-auto pr-1">
+          <Card className="flex flex-col shrink-0">
+            <CardHeader title="Citations" subtitle="Sections retrieved & graph-expanded" />
+            {lowConfidence && (
+              <Badge tone="red" className="mx-4 mt-2">Low confidence — retrieval was weak</Badge>
             )}
-          </div>
-          <Disclaimer className="mt-4" />
-        </Card>
+            <div className="p-4 space-y-3">
+              {citations.length === 0 ? (
+                <p className="text-sm text-ink-400">
+                  Citations from the legal database will appear here once you ask a question.
+                </p>
+              ) : (
+                citations.map((c, i) => (
+                  <CitationCard key={i} citation={c} onClick={setActiveCitation} />
+                ))
+              )}
+            </div>
+          </Card>
+
+          <Card className="flex flex-col shrink-0">
+            <CardHeader title="Similar Case History" subtitle="Retrieved from Supreme Court records" />
+            <div className="p-4 space-y-3">
+              {!similarCases?.length ? (
+                <p className="text-sm text-ink-400">
+                  Similar case history will appear here once you ask a question.
+                </p>
+              ) : (
+                similarCases.map((c, i) => (
+                  <SimilarCaseCard key={i} similarCase={c} onClick={setActiveSimilarCase} />
+                ))
+              )}
+            </div>
+          </Card>
+
+          <Disclaimer className="mt-2 shrink-0" />
+        </div>
       </div>
 
       <CitationModal
         citation={activeCitation}
         onClose={() => setActiveCitation(null)}
+      />
+      <SimilarCaseModal
+        similarCase={activeSimilarCase}
+        onClose={() => setActiveSimilarCase(null)}
       />
     </div>
   )

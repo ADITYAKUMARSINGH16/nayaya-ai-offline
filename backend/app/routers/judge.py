@@ -34,7 +34,7 @@ async def analyze_case(
     cases_context = "NO HISTORICAL PRECEDENTS FOUND."
     if similar_cases_data:
         cases_context = "\n\n".join(
-            f"Case: {c['title']} ({c['year']}) - {c['court']}\nDisposition: {c['disposition']}\nSummary: {c['snippet']}"
+            f"Case: {c['title']} ({c['year']}) - {c['court']}\nDisposition: {c['disposition']}\nSummary: {c.get('summary') or c.get('snippet')}"
             for c in similar_cases_data
         )
 

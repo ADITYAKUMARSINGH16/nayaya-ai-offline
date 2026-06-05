@@ -43,6 +43,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       { to: '/app/bare-acts',    label: 'Bare Acts',     icon: BookOpen },
       { to: '/app/judge/case-laws', label: 'Supreme Court Cases', icon: Landmark },
       { to: '/app/eval',         label: 'Evaluation',      icon: BarChart3 },
+      
     ]
   }
 

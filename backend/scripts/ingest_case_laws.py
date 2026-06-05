@@ -44,6 +44,8 @@ async def ingest_batch(batch, provider):
             "year": year,
             "disposition": str(item.get("disposition_text") or ""),
             "snippet": headnote[:500] + ("..." if len(headnote) > 500 else ""),
+            "summary": headnote,
+            "source_pdf_s3_url": item.get("source_pdf_s3_url") or "",
             "text": text,
         }
         metadata_list.append(metadata)

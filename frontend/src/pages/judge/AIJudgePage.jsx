@@ -10,6 +10,8 @@ import ConversationsSidebar from '@/components/ConversationsSidebar'
 import Badge from '@/components/ui/Badge'
 import CitationCard from '@/components/CitationCard'
 import CitationModal from '@/components/CitationModal'
+import SimilarCaseCard from '@/components/SimilarCaseCard'
+import SimilarCaseModal from '@/components/SimilarCaseModal'
 import Disclaimer from '@/components/Disclaimer'
 
 export default function AIJudgePage() {
@@ -20,6 +22,7 @@ export default function AIJudgePage() {
   const [error, setError] = useState('')
   const [sessionId, setSessionId] = useState(null)
   const [activeCitation, setActiveCitation] = useState(null)
+  const [activeSimilarCase, setActiveSimilarCase] = useState(null)
 
   const handleSelectHistory = async (id) => {
     setSessionId(id)
@@ -161,10 +164,10 @@ export default function AIJudgePage() {
           </AnimatePresence>
         </div>
 
-        <div className="flex flex-col gap-4 h-full overflow-hidden">
-          <Card className="overflow-hidden flex flex-col flex-1 min-h-0">
+        <div className="flex flex-col gap-4 h-full overflow-y-auto pr-1">
+          <Card className="flex flex-col shrink-0">
             <CardHeader title="Citations" subtitle="Bare acts retrieved" />
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            <div className="p-4 space-y-3">
               {!analysis?.citations?.length ? (
                 <p className="text-sm text-ink-400">
                   Citations from the legal database will appear here once you analyze a case.
@@ -175,14 +178,34 @@ export default function AIJudgePage() {
                 ))
               )}
             </div>
-            <Disclaimer className="mt-4" />
           </Card>
+
+          <Card className="flex flex-col shrink-0">
+            <CardHeader title="Similar Case History" subtitle="Retrieved from Supreme Court records" />
+            <div className="p-4 space-y-3">
+              {!analysis?.similar_cases?.length ? (
+                <p className="text-sm text-ink-400">
+                  Similar case history will appear here once you analyze a case.
+                </p>
+              ) : (
+                analysis.similar_cases.map((c, i) => (
+                  <SimilarCaseCard key={i} similarCase={c} onClick={setActiveSimilarCase} />
+                ))
+              )}
+            </div>
+          </Card>
+
+          <Disclaimer className="mt-2 shrink-0" />
         </div>
       </div>
 
       <CitationModal
         citation={activeCitation}
         onClose={() => setActiveCitation(null)}
+      />
+      <SimilarCaseModal
+        similarCase={activeSimilarCase}
+        onClose={() => setActiveSimilarCase(null)}
       />
     </div>
   )

@@ -214,6 +214,8 @@ async def _search_case_laws_qdrant(query: str, top_k: int = 3) -> list[dict[str,
             "year": payload.get("year", ""),
             "disposition": payload.get("disposition", ""),
             "snippet": payload.get("snippet", ""),
+            "summary": payload.get("summary", ""),
+            "source_pdf_s3_url": payload.get("source_pdf_s3_url", ""),
             "text": payload.get("text", ""),
         })
     return out
@@ -251,6 +253,8 @@ async def _search_case_laws_pinecone(query: str, top_k: int = 3) -> list[dict[st
             "year": meta.get("year", ""),
             "disposition": meta.get("disposition", ""),
             "snippet": meta.get("snippet", ""),
+            "summary": meta.get("summary", ""),
+            "source_pdf_s3_url": meta.get("source_pdf_s3_url", ""),
             "text": meta.get("text", ""),
         })
     return out

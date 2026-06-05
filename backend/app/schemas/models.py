@@ -146,6 +146,8 @@ class SimilarCase(BaseModel):
     year: str = ""
     disposition: str = ""
     snippet: str = ""
+    summary: str = ""
+    source_pdf_s3_url: str = ""
     text: str = ""
     score: float | None = None
 

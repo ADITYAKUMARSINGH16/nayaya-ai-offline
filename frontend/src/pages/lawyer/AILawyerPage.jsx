@@ -9,6 +9,8 @@ import ConversationsSidebar from '@/components/ConversationsSidebar'
 import Badge from '@/components/ui/Badge'
 import CitationCard from '@/components/CitationCard'
 import CitationModal from '@/components/CitationModal'
+import SimilarCaseCard from '@/components/SimilarCaseCard'
+import SimilarCaseModal from '@/components/SimilarCaseModal'
 import Disclaimer from '@/components/Disclaimer'
 
 export default function AILawyerPage() {
@@ -18,6 +20,8 @@ export default function AILawyerPage() {
   const [error, setError] = useState('')
   const [sessionId, setSessionId] = useState(null)
   const [activeCitation, setActiveCitation] = useState(null)
+  const [similarCases, setSimilarCases] = useState([])
+  const [activeSimilarCase, setActiveSimilarCase] = useState(null)
 
   const handleSelectHistory = async (id) => {
     setSessionId(id)
@@ -44,6 +48,7 @@ export default function AILawyerPage() {
     setSessionId(null)
     setCaseFacts('')
     setAnalysis(null)
+    setSimilarCases([])
     setError('')
   }
 
@@ -52,9 +57,16 @@ export default function AILawyerPage() {
     setLoading(true)
     setError('')
     setAnalysis(null)
+    setSimilarCases([])
     try {
       const data = await api.lawyerAnalyze({ caseFacts })
       setAnalysis(data)
+      try {
+        const sc = await api.judgeSearchCaseLaws(caseFacts)
+        setSimilarCases(sc || [])
+      } catch (err) {
+        console.error("Failed to fetch similar cases", err)
+      }
     } catch (err) {
       console.error("Analyze error:", err)
       setError(err.message || 'Failed to analyze case')
@@ -143,27 +155,49 @@ export default function AILawyerPage() {
       )}
       </div>
 
-        {/* Citations Sidebar */}
-        <Card className="overflow-hidden flex flex-col h-full">
-          <CardHeader title="Citations" subtitle="Sections retrieved & graph-expanded" />
-          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-            {!analysis?.citations?.length ? (
-              <p className="text-sm text-ink-400">
-                Citations from the legal database will appear here once you analyze a case.
-              </p>
-            ) : (
-              analysis.citations.map((c, i) => (
-                <CitationCard key={i} citation={c} onClick={setActiveCitation} />
-              ))
-            )}
-          </div>
-          <Disclaimer className="mt-4" />
-        </Card>
+        {/* Sidebar Panel */}
+        <div className="flex flex-col gap-4 h-full overflow-y-auto pr-1">
+          <Card className="flex flex-col shrink-0">
+            <CardHeader title="Citations" subtitle="Sections retrieved & graph-expanded" />
+            <div className="p-4 space-y-3">
+              {!analysis?.citations?.length ? (
+                <p className="text-sm text-ink-400">
+                  Citations from the legal database will appear here once you analyze a case.
+                </p>
+              ) : (
+                analysis.citations.map((c, i) => (
+                  <CitationCard key={i} citation={c} onClick={setActiveCitation} />
+                ))
+              )}
+            </div>
+          </Card>
+
+          <Card className="flex flex-col shrink-0">
+            <CardHeader title="Similar Case History" subtitle="Retrieved from Supreme Court records" />
+            <div className="p-4 space-y-3">
+              {!similarCases?.length ? (
+                <p className="text-sm text-ink-400">
+                  Similar case history will appear here once you analyze a case.
+                </p>
+              ) : (
+                similarCases.map((c, i) => (
+                  <SimilarCaseCard key={i} similarCase={c} onClick={setActiveSimilarCase} />
+                ))
+              )}
+            </div>
+          </Card>
+
+          <Disclaimer className="mt-2 shrink-0" />
+        </div>
       </div>
 
       <CitationModal
         citation={activeCitation}
         onClose={() => setActiveCitation(null)}
+      />
+      <SimilarCaseModal
+        similarCase={activeSimilarCase}
+        onClose={() => setActiveSimilarCase(null)}
       />
     </div>
   )
