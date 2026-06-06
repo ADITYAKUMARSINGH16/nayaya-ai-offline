@@ -134,7 +134,20 @@ export default function CaseLawsPage() {
                     )}
                   </div>
                   
-                  <div className="prose prose-invert prose-p:leading-relaxed max-w-none text-ink-200 whitespace-pre-wrap">
+                  {c.source_pdf_s3_url && (
+                    <div className="mb-4">
+                      <a 
+                        href={`${import.meta.env.VITE_API_URL || ''}/api/cases/pdf/proxy?url=${encodeURIComponent(c.source_pdf_s3_url)}`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gold-500/10 text-gold-500 hover:bg-gold-500/20 transition-colors text-sm font-medium border border-gold-500/20"
+                      >
+                        View Source PDF
+                      </a>
+                    </div>
+                  )}
+
+                  <div className="prose prose-invert prose-p:leading-relaxed max-w-none text-ink-200 whitespace-pre-wrap max-h-[500px] overflow-y-auto pr-4 border border-white/5 rounded-xl bg-white/5 p-6">
                     {c.text || c.snippet || 'No case text available.'}
                   </div>
                   

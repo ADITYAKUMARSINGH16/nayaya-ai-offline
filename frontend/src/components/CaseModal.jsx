@@ -55,7 +55,20 @@ export default function CaseModal({ caseData, onClose }) {
                 </div>
               )}
 
-              <div className="text-sm text-ink-100 leading-relaxed whitespace-pre-wrap rounded-xl bg-ink-950/40 border border-white/5 p-4">
+              {caseData.source_pdf_s3_url && (
+                <div className="mb-4">
+                  <a 
+                    href={`${import.meta.env.VITE_API_URL || ''}/api/cases/pdf/proxy?url=${encodeURIComponent(caseData.source_pdf_s3_url)}`} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gold-500/10 text-gold-500 hover:bg-gold-500/20 transition-colors text-sm font-medium border border-gold-500/20"
+                  >
+                    View Source PDF
+                  </a>
+                </div>
+              )}
+
+              <div className="text-sm text-ink-100 leading-relaxed whitespace-pre-wrap rounded-xl bg-ink-950/40 border border-white/5 p-4 max-h-96 overflow-y-auto">
                 {caseData.text?.trim() || caseData.snippet?.trim() || 'No case summary available.'}
               </div>
             </div>

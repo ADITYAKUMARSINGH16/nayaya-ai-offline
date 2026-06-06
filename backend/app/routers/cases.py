@@ -1,6 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+import httpx
+import tarfile
+import io
 
 from app.agents.courtroom import run_trial
 from app.core.security import CurrentUser, get_current_user
@@ -10,6 +13,73 @@ from app.services.n8n import notify_verdict
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
+class HTTPStreamProxy(io.RawIOBase):
+    def __init__(self, url):
+        self.client = httpx.Client()
+        self.response = self.client.stream("GET", url)
+        self.stream = self.response.__enter__()
+        self.iterator = self.stream.iter_bytes(chunk_size=8192)
+        self.buffer = b""
+
+    def readinto(self, b):
+        if not self.buffer:
+            try:
+                self.buffer = next(self.iterator)
+            except StopIteration:
+                return 0
+        
+        length = min(len(b), len(self.buffer))
+        b[:length] = self.buffer[:length]
+        self.buffer = self.buffer[length:]
+        return length
+
+    def close(self):
+        self.response.__exit__(None, None, None)
+        self.client.close()
+        super().close()
+
+def extract_pdf_from_tar(url: str, member_name: str):
+    proxy = HTTPStreamProxy(url)
+    try:
+        tar = tarfile.open(fileobj=proxy, mode="r|")
+        # Example member_name from db: 1996_3_868_869.pdf
+        # Example member in tar: S_1996_3_868_869_EN.pdf
+        core_id = member_name.replace(".pdf", "")
+        for member in tar:
+            if core_id in member.name:
+                f = tar.extractfile(member)
+                if f:
+                    content = f.read()
+                    tar.close()
+                    return content
+        tar.close()
+    except Exception as e:
+        print(f"Error reading tar: {e}")
+    finally:
+        proxy.close()
+    return None
+
+@router.get("/pdf/proxy")
+def proxy_pdf(url: str = Query(..., description="The full S3 URL including #member=...")):
+    if "#member=" not in url:
+        raise HTTPException(status_code=400, detail="URL must contain #member= fragment")
+    
+    base_url, member_part = url.split("#member=", 1)
+    
+    try:
+        content = extract_pdf_from_tar(base_url, member_part)
+        if not content:
+            raise HTTPException(status_code=404, detail="PDF member not found in tar archive")
+            
+        headers = {
+            "Content-Disposition": f'inline; filename="{member_part}"',
+            "Content-Length": str(len(content)),
+        }
+        return Response(content=content, media_type="application/pdf", headers=headers)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("")
 async def list_cases(
