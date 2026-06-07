@@ -30,11 +30,16 @@ export default function AILawyerPage() {
       const messages = res.messages || []
       const userMsg = messages.find(m => m.role === 'user')
       const assistantMsg = messages.find(m => m.role === 'assistant')
-      
+
       if (userMsg) setCaseFacts(userMsg.message)
       if (assistantMsg) {
         try {
-          setAnalysis(JSON.parse(assistantMsg.message))
+          const parsed = JSON.parse(assistantMsg.message)
+          setAnalysis(parsed)
+          // Similar cases live in a separate state slot on this page
+          // (lawyer page renders them outside `analysis`), so rehydrate
+          // it explicitly from the persisted payload.
+          setSimilarCases(parsed.similar_cases || [])
         } catch (e) {
           console.error("Failed to parse history JSON", e)
         }
@@ -61,12 +66,10 @@ export default function AILawyerPage() {
     try {
       const data = await api.lawyerAnalyze({ caseFacts })
       setAnalysis(data)
-      try {
-        const sc = await api.judgeSearchCaseLaws(caseFacts)
-        setSimilarCases(sc || [])
-      } catch (err) {
-        console.error("Failed to fetch similar cases", err)
-      }
+      // Backend now returns similar_cases as part of the analyze response
+      // (and persists them in chat_history), so just lift them into state.
+      // No more separate /judge/case-laws/search call from this page.
+      setSimilarCases(data.similar_cases || [])
     } catch (err) {
       console.error("Analyze error:", err)
       setError(err.message || 'Failed to analyze case')
@@ -158,7 +161,7 @@ export default function AILawyerPage() {
         {/* Sidebar Panel */}
         <div className="flex flex-col gap-4 h-full overflow-y-auto pr-1">
           <Card className="flex flex-col shrink-0">
-            <CardHeader title="Citations" subtitle="Sections retrieved & graph-expanded" />
+            <CardHeader title="Citations" subtitle="BNS / BNSS / BSA sections retrieved by the verifier" />
             <div className="p-4 space-y-3">
               {!analysis?.citations?.length ? (
                 <p className="text-sm text-ink-400">

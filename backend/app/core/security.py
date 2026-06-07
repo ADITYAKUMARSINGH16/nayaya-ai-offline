@@ -92,10 +92,12 @@ def get_current_user(
             role = claims.get("user_metadata", {}).get("role", "user")
         if role:
             role = role.lower()
-            
-    print(f"DEBUG ROLE RESOLUTION: user_id={user_id}, db_role={db.get_user_role(user_id) if user_id else None}, final_role={role}, claims={claims}")
 
-        
+    # Note: a stray `print("DEBUG ROLE RESOLUTION: ...")` previously lived here
+    # and (a) leaked the user's id + full JWT claims to stdout on every request
+    # and (b) called db.get_user_role() a second time inside the f-string,
+    # silently doubling the DB load per authenticated request. Removed.
+
     return CurrentUser(
         id=user_id,
         email=email or None,

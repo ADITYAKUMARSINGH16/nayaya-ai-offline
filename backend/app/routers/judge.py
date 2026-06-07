@@ -3,7 +3,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from app.core.security import CurrentUser, require_judge
+from app.core.security import CurrentUser, get_current_user, require_judge
 from app.schemas import models
 from app.services import db
 
@@ -52,9 +52,18 @@ async def analyze_case(
     citations = await verify_text(blob)
     
     session_id = f"judge_{uuid.uuid4().hex}"
+    # Persist the FULL response (citations + similar cases included) so the
+    # sidebar history can rehydrate every panel, not just the LLM body.
+    full_payload = {
+        "legal_questions":        data.get("legal_questions", []),
+        "admissibility_issues":   data.get("admissibility_issues", []),
+        "potential_liabilities":  data.get("potential_liabilities", []),
+        "citations":              [c.model_dump() if hasattr(c, "model_dump") else c for c in citations],
+        "similar_cases":          [c if isinstance(c, dict) else c.model_dump() for c in similar_cases_data],
+    }
     try:
         db.save_message(session_id, user.id, "user", req.case_facts, {"type": "judge_analysis"})
-        db.save_message(session_id, user.id, "assistant", json.dumps(data), {"type": "judge_analysis"})
+        db.save_message(session_id, user.id, "assistant", json.dumps(full_payload), {"type": "judge_analysis"})
     except Exception:
         pass
 
@@ -76,9 +85,11 @@ class VerdictOverrideRequest(BaseModel):
 @router.get("/cases")
 async def get_judge_cases(
     user: Annotated[CurrentUser, Depends(require_judge)],
+    limit: int = 50,
+    offset: int = 0,
 ):
-    """Get all cases for the judge dashboard."""
-    cases = db.list_all_cases()
+    """Get all cases for the judge dashboard. Paginated (limit capped at 200)."""
+    cases = db.list_all_cases(limit=min(limit, 200), offset=offset)
     return cases
 
 
@@ -130,15 +141,22 @@ async def get_similar_cases(
 @router.get("/case-laws/search", response_model=list[models.SimilarCase])
 async def search_supreme_court_cases(
     q: str,
-    user: Annotated[CurrentUser, Depends(require_judge)],
+    user: Annotated[CurrentUser, Depends(get_current_user)],
 ):
-    """Search historical Supreme Court case laws."""
+    """Search historical Supreme Court case laws.
+
+    Note: this endpoint is intentionally available to ANY signed-in user, not
+    just judges. The underlying data — Supreme Court of India judgments — is
+    public record, and the citizen-facing Assistant page also surfaces similar
+    cases in its right-hand panel. Originally guarded by `require_judge`, which
+    made non-judge users hit 403 on every keystroke in the Assistant search.
+    """
     from app.services.vector_store import search_case_laws
-    
+
     if not q.strip():
         # Return default recent cases to populate Table of Contents
         results = await search_case_laws("", top_k=20)
         return results
-        
+
     results = await search_case_laws(q, top_k=20)
     return results

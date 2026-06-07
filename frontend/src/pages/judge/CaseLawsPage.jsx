@@ -135,14 +135,21 @@ export default function CaseLawsPage() {
                   </div>
                   
                   {c.source_pdf_s3_url && (
-                    <div className="mb-4">
-                      <a 
-                        href={`${import.meta.env.VITE_API_URL || ''}/api/cases/pdf/proxy?url=${encodeURIComponent(c.source_pdf_s3_url)}`} 
-                        target="_blank" 
-                        rel="noreferrer" 
+                    <div className="mb-4 flex gap-2">
+                      <a
+                        href={`${import.meta.env.VITE_API_URL || ''}/api/cases/pdf/proxy?url=${encodeURIComponent(c.source_pdf_s3_url)}`}
+                        target="_blank"
+                        rel="noreferrer"
                         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gold-500/10 text-gold-500 hover:bg-gold-500/20 transition-colors text-sm font-medium border border-gold-500/20"
                       >
                         View Source PDF
+                      </a>
+                      <a
+                        href={`${import.meta.env.VITE_API_URL || ''}/api/cases/pdf/proxy?url=${encodeURIComponent(c.source_pdf_s3_url)}&download=1`}
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 text-ink-200 hover:bg-white/10 transition-colors text-sm font-medium border border-white/10"
+                      >
+                        Download
                       </a>
                     </div>
                   )}

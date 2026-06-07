@@ -16,6 +16,7 @@ from app.schemas.models import (
     TrialResponse,
 )
 from app.services import db
+from app.services.n8n import notify_verdict
 from app.services.rag import retrieve_context
 
 _APPEAL_NOTE = {
@@ -150,6 +151,24 @@ async def run_trial(req: TrialRequest) -> TrialResponse:
                 "judgment": judgment.model_dump(),
             }
             db.save_message(session_id, req.user_id, "assistant", json.dumps(trial_data), {"type": "trial"})
+    except Exception:
+        pass
+
+    # Fire-and-forget verdict notification (Email/Slack/Telegram via n8n).
+    # Lives HERE (in the agent) rather than in the cases.py router so that
+    # any caller of run_trial — the trial endpoint, the agent-petitioner
+    # workflow, tests, future internal callers — all trigger notifications
+    # automatically. Caller passes user_email through TrialRequest so the
+    # email channel knows where to address the reply. Wrapped in try/except
+    # so n8n outages never fail trials.
+    try:
+        await notify_verdict({
+            "case_id":             case_id,
+            "court_level":         req.court_level,
+            "final_judgment":      judgment.final_judgment,
+            "applicable_sections": judgment.applicable_sections,
+            "user_email":          req.user_email,
+        })
     except Exception:
         pass
 

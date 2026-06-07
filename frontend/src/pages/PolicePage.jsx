@@ -177,11 +177,20 @@ export default function PolicePage() {
             title="Evidence"
             subtitle={`${evidence.length} file${evidence.length === 1 ? '' : 's'} attached`}
           />
-          <label className="btn-ghost w-full cursor-pointer">
-            <Upload className="w-4 h-4" />
-            Upload files
-            <input type="file" multiple onChange={handleUpload} className="hidden" />
-          </label>
+          {hasSupabase ? (
+            <label className="btn-ghost w-full cursor-pointer">
+              <Upload className="w-4 h-4" />
+              Upload files
+              <input type="file" multiple onChange={handleUpload} className="hidden" />
+            </label>
+          ) : (
+            <div className="w-full px-3 py-2 rounded-xl bg-red-950/20 border border-red-900/30 text-xs text-red-300">
+              <strong>Evidence upload disabled.</strong> Supabase is not configured
+              for this build — set <code>VITE_SUPABASE_URL</code> and
+              <code> VITE_SUPABASE_ANON_KEY</code> in <code>.env</code> and rebuild
+              the frontend to enable file uploads.
+            </div>
+          )}
 
           {evidence.length === 0 ? (
             <p className="text-xs text-ink-400 italic mt-3">

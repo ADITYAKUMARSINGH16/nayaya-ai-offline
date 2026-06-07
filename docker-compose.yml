@@ -32,8 +32,11 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
-        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
-        VITE_SUPA_ANON_PUB: ${SUPABASE_ANON_KEY}
+        # Names must match what frontend/src/lib/supabase.js reads
+        # (import.meta.env.VITE_SUPABASE_URL + .VITE_SUPABASE_ANON_KEY).
+        # Fall back to backend names so .env stays single-source-of-truth.
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-${SUPABASE_URL}}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-${SUPABASE_ANON_KEY}}
     container_name: nyaya-frontend
     ports:
       - "5173:80"
@@ -44,7 +47,9 @@ services:
       - nyaya
 
   n8n:
-    image: n8nio/n8n:latest
+    build:
+      context: ./n8n
+      dockerfile: Dockerfile
     container_name: nyaya-n8n
     ports:
       - "5678:5678"
@@ -61,6 +66,13 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      # Telegram — used by fir-human-approval (sends FIR with Approve/Reject buttons)
+      # AND case-notify-fanout (sends verdict notification — F4 fix).
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      # Backend base URL — used by FIR approval callback so n8n can reach
+      # /api/internal/fir/{id}/approval from within the docker network.
+      - BACKEND_URL=http://backend:8000
       # Allow workflows to read process.env via the {{ $env.* }} expression.
       # n8n blocks this by default for security; we trust our own workflows here.
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=false

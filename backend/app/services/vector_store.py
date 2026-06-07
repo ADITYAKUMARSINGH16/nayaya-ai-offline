@@ -188,7 +188,7 @@ async def _search_sections_pinecone(
 async def _search_case_laws_qdrant(query: str, top_k: int = 3) -> list[dict[str, Any]]:
     from qdrant_client.http import models
     client = _qdrant_client()
-    
+
     if not query.strip():
         vector = [1e-6] * settings.embeddings_dim
     else:
@@ -201,8 +201,17 @@ async def _search_case_laws_qdrant(query: str, top_k: int = 3) -> list[dict[str,
             limit=top_k,
             with_payload=True
         )
-    except Exception:
-        return [] # Collection might not exist yet
+    except Exception as exc:
+        # Distinguish "no matches" (return empty silently) from "collection
+        # doesn't exist" / "Qdrant unreachable" (log it so admins see "you
+        # need to run seed_qdrant_full.py" instead of a silent empty UI).
+        import logging
+        logging.getLogger(__name__).warning(
+            "Qdrant case-laws search failed (collection '%s' may be unseeded "
+            "— run scripts/seed_qdrant_full.py): %s",
+            settings.qdrant_case_laws_collection, exc,
+        )
+        return []
 
     out: list[dict[str, Any]] = []
     for m in result:
@@ -221,14 +230,25 @@ async def _search_case_laws_qdrant(query: str, top_k: int = 3) -> list[dict[str,
     return out
 
 
-async def _search_case_laws_pinecone(query: str, top_k: int = 3) -> list[dict[str, Any]]:
+@lru_cache
+def _pinecone_case_laws_index():
+    """Cached Pinecone Index handle for the case-laws collection.
+
+    Without this cache, `_search_case_laws_pinecone` re-initialised the
+    Pinecone SDK + re-resolved the index host on EVERY search — adding
+    ~100-300ms per call. The function is only initialised once per worker.
+    """
     from pinecone import Pinecone
     pc = Pinecone(api_key=settings.pinecone_api_key)
+    return pc.Index(settings.pinecone_case_laws_index)
+
+
+async def _search_case_laws_pinecone(query: str, top_k: int = 3) -> list[dict[str, Any]]:
     try:
-        index = pc.Index(settings.pinecone_case_laws_index)
+        index = _pinecone_case_laws_index()
     except Exception:
         return []
-        
+
     if not query.strip():
         vector = [1e-6] * settings.embeddings_dim
     else:

@@ -60,13 +60,32 @@ async def fir_approval_callback(
     body: ApprovalCallback,
     x_internal_key: str | None = Header(default=None, alias="X-Internal-Key"),
 ) -> dict[str, Any]:
-    """n8n calls this after a reviewer approves/rejects an FIR in Telegram."""
+    """n8n calls this after a reviewer approves/rejects an FIR in Telegram.
+
+    Idempotency: if the FIR is already in a terminal state (approved | rejected
+    | filed), we return 200 with `already=True` instead of PATCHing again.
+    This prevents the dual-path approval flow (Wait-node resume + Telegram
+    inline button) from clobbering each other when Telegram retries delivery.
+    """
     _verify_internal_key(x_internal_key)
 
     new_status = body.status.strip().lower()
     if new_status not in {"approved", "rejected"}:
         raise HTTPException(status_code=400,
                             detail=f"status must be approved|rejected, got {body.status!r}")
+
+    # Idempotency check — read first, only update if mutable.
+    try:
+        existing = db.get_fir(record_id)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"DB fetch failed: {exc}")
+    if not existing:
+        raise HTTPException(status_code=404, detail=f"FIR {record_id} not found")
+
+    cur = (existing.get("status") or "").lower()
+    if cur in {"approved", "rejected", "filed"}:
+        return {"ok": True, "fir": existing, "reviewer": body.reviewer,
+                "already": True, "previous_status": cur}
 
     try:
         updated = db.update_fir_status(record_id, new_status)
@@ -76,7 +95,7 @@ async def fir_approval_callback(
     if not updated:
         raise HTTPException(status_code=404, detail=f"FIR {record_id} not found")
 
-    return {"ok": True, "fir": updated, "reviewer": body.reviewer}
+    return {"ok": True, "fir": updated, "reviewer": body.reviewer, "already": False}
 
 
 @fir_status_router.get("/{record_id}/status")

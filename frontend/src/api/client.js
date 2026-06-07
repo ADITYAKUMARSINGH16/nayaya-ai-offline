@@ -35,7 +35,9 @@ export const api = {
   getCase:      (id)      => request(`/api/cases/${id}`),
   listCases:    ()        => request('/api/cases'),
   evalRuns:     (limit=30)=> request(`/api/eval/runs?limit=${limit}`),
-  evalLatest:   ()        => request('/api/eval/latest'),
+  // Note: /api/eval/latest exists on the backend but is consumed by the n8n
+  // eval-cron workflow for its Slack/email digest, not the frontend — the
+  // EvalDashboard derives "latest" from the runs list it already loads.
 
   // Chat-history sidebar — user_id passed as query param because soft-auth
   // can't verify the new ES256 Supabase JWT yet, so the backend can't derive
@@ -79,21 +81,16 @@ export const api = {
   judgeGetSimilarCases: (caseId) => request(`/api/judge/cases/${caseId}/similar`),
   judgeSearchCaseLaws: (q) => request(`/api/judge/case-laws/search?q=${encodeURIComponent(q)}`),
 
-  /**
-   * Streaming assistant. Pass `{ signal, onEvent }` where `onEvent` receives
-   * `{ event, data }` for each SSE message (event = "token"|"citations"|"intent"|"done"|"error").
-   */
-  assistantStream: async (payload, { signal, onEvent } = {}) =>
-    streamPost(`${BASE}/api/assistant/stream`, payload, {
-      headers: await authHeaders(),
-      signal,
-      onEvent: (event, data) => onEvent?.({ event, data }),
-    }),
+  // (Streaming assistant lives as the bare `streamAssistant` export below.
+  // The duplicate `api.assistantStream` entry that previously sat here had a
+  // different callback shape and no consumers — removed to prevent confusion.)
 
   // Admin
   adminGetFirs: () => request('/api/admin/firs'),
-  adminGetCases: () => request('/api/admin/cases'),
+  adminGetCases: ({ limit = 50, offset = 0 } = {}) =>
+    request(`/api/admin/cases?limit=${limit}&offset=${offset}`),
   adminOverrideFirStatus: (firId, status) => request(`/api/admin/firs/${firId}/status`, { method: 'POST', body: { status } }),
+  adminGetStats: () => request('/api/admin/stats'),     // graph health for the dashboard panel
 
   // Bare Acts
   bareActsList: () => request('/api/bare-acts/'),

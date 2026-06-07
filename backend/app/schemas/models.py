@@ -92,6 +92,7 @@ class TrialRequest(BaseModel):
     question: str  # full case facts (FIR + investigation summary)
     case_id: str | None = Field(default=None, alias="caseId")
     user_id: str | None = Field(default=None, alias="userId")
+    user_email: str | None = Field(default=None, alias="userEmail")
     rounds: int = 1
     court_level: str = "district"  # district | high | supreme
 
@@ -127,18 +128,7 @@ class TrialResponse(BaseModel):
     case_id: str | None = None
 
 
-# ---- lawyer analysis ----------------------------------------------------
-
-class LawyerAnalysisResponse(BaseModel):
-    strategy: str
-    strengths: list[str] = []
-    weaknesses: list[str] = []
-    evidence_needed: list[str] = []
-    citations: list[Citation] = []
-    session_id: str | None = None
-
-
-# ---- judge analysis -----------------------------------------------------
+# ---- similar-case payload (used by both lawyer + judge sidebars) --------
 
 class SimilarCase(BaseModel):
     title: str = ""
@@ -150,6 +140,21 @@ class SimilarCase(BaseModel):
     source_pdf_s3_url: str = ""
     text: str = ""
     score: float | None = None
+
+
+# ---- lawyer analysis ----------------------------------------------------
+
+class LawyerAnalysisResponse(BaseModel):
+    strategy: str
+    strengths: list[str] = []
+    weaknesses: list[str] = []
+    evidence_needed: list[str] = []
+    citations: list[Citation] = []
+    similar_cases: list[SimilarCase] = []
+    session_id: str | None = None
+
+
+# ---- judge analysis -----------------------------------------------------
 
 class JudgeAnalysisResponse(BaseModel):
     legal_questions: list[str] = []

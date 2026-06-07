@@ -43,7 +43,15 @@ async def list_conversations(
     category: str = "assistant",
     limit: int = 50,
 ):
-    """Return the caller's recent conversations (one row per session_id)."""
+    """Return the caller's recent conversations (one row per session_id).
+
+    Filtering by category:
+      - PRIMARY: read `metadata->>type` (set explicitly by every writer:
+        "lawyer_analysis", "judge_analysis", "trial", or absent for assistant).
+      - FALLBACK: legacy rows from before metadata.type was wired use the old
+        session_id prefix rule (`lawyer_*`, `judge_*`, `trial_*`). Both paths
+        return the same shape so the UI doesn't care which matched.
+    """
     uid = _resolve_user_id(user, user_id)
     if not uid:
         return {"conversations": []}
@@ -52,7 +60,7 @@ async def list_conversations(
         res = (
             _client()
             .table("chat_history")
-            .select("session_id, role, message, created_at")
+            .select("session_id, role, message, created_at, metadata")
             .eq("user_id", uid)
             .order("created_at", desc=False)
             .limit(2000)
@@ -61,18 +69,36 @@ async def list_conversations(
     except Exception:
         return {"conversations": []}
 
+    # Map each frontend category → the metadata.type value(s) that match.
+    # 'assistant' is special — it's anything without an explicit type tag
+    # (i.e. plain chat) AND not legacy-prefixed.
+    _CATEGORY_TO_TYPE = {
+        "lawyer": {"lawyer_analysis"},
+        "judge":  {"judge_analysis"},
+        "trial":  {"trial"},
+    }
+    expected_types = _CATEGORY_TO_TYPE.get(category)   # None → assistant
+
+    def _matches(row: dict) -> bool:
+        meta = row.get("metadata") or {}
+        rtype = meta.get("type") if isinstance(meta, dict) else None
+        sid = row["session_id"]
+        if expected_types is not None:
+            # Primary: metadata.type matches. Fallback: legacy session_id prefix.
+            if rtype in expected_types:
+                return True
+            # Legacy fallback for rows written before metadata.type was set.
+            return any(sid.startswith(f"{c}_") for c in expected_types
+                       for c in ({"lawyer_analysis": "lawyer",
+                                  "judge_analysis":  "judge",
+                                  "trial":           "trial"}.get(c, c),))
+        # category == "assistant" → no specific type AND not a legacy-tagged session
+        if rtype in {"lawyer_analysis", "judge_analysis", "trial"}:
+            return False
+        return not (sid.startswith("lawyer_") or sid.startswith("judge_") or sid.startswith("trial_"))
+
     all_rows = res.data or []
-    rows = []
-    for r in all_rows:
-        sid = r["session_id"]
-        if category == "lawyer" and sid.startswith("lawyer_"):
-            rows.append(r)
-        elif category == "judge" and sid.startswith("judge_"):
-            rows.append(r)
-        elif category == "trial" and sid.startswith("trial_"):
-            rows.append(r)
-        elif category == "assistant" and not (sid.startswith("lawyer_") or sid.startswith("judge_") or sid.startswith("trial_")):
-            rows.append(r)
+    rows = [r for r in all_rows if _matches(r)]
 
     by_session: "OrderedDict[str, dict]" = OrderedDict()
     for r in rows:

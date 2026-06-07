@@ -62,10 +62,15 @@ async def override_fir_status(
 
 
 @router.get("/cases")
-async def get_all_cases(_: Annotated[CurrentUser, Depends(_require_admin_or_internal)]):
-    """Get all Cases across the platform (Admin only)."""
+async def get_all_cases(
+    _: Annotated[CurrentUser, Depends(_require_admin_or_internal)],
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Get all Cases across the platform (Admin only). Paginated."""
     from app.services import db
-    return {"cases": db.list_all_cases()}
+    return {"cases": db.list_all_cases(limit=min(limit, 200), offset=offset),
+            "limit": limit, "offset": offset}
 
 
 # Backend root — /app in Docker, the actual repo dir on Render.

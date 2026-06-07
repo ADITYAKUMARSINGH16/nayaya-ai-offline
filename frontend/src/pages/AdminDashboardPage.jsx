@@ -20,6 +20,7 @@ export default function AdminDashboardPage() {
   const [users, setUsers] = useState([])
   const [firs, setFirs] = useState([])
   const [cases, setCases] = useState([])
+  const [graphStats, setGraphStats] = useState(null)
   
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -48,10 +49,17 @@ export default function AdminDashboardPage() {
       const firRes = await api.adminGetFirs()
       setFirs(firRes.firs || [])
       
-      // Fetch global Cases via backend
-      const caseRes = await api.adminGetCases()
+      // Fetch global Cases via backend (paginated; first page only here)
+      const caseRes = await api.adminGetCases({ limit: 50, offset: 0 })
       setCases(caseRes.cases || [])
 
+      // Fetch knowledge-graph health (best-effort — non-fatal if it fails).
+      try {
+        const stats = await api.adminGetStats()
+        setGraphStats(stats?.graph || null)
+      } catch {
+        setGraphStats(null)
+      }
     } catch (err) {
       console.error(err)
       setError(err.message)
@@ -159,12 +167,24 @@ export default function AdminDashboardPage() {
             <Activity className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-sm font-medium text-ink-400 mb-1">System Status</h3>
-            <p className="text-3xl font-serif text-green-400">Online</p>
+            <h3 className="text-sm font-medium text-ink-400 mb-1">Knowledge Graph</h3>
+            {graphStats ? (
+              <>
+                <p className="text-3xl font-serif text-green-400">
+                  {graphStats.entities ?? graphStats.nodes ?? '—'}
+                </p>
+                <p className="text-xs text-ink-400 mt-0.5">
+                  entities · {graphStats.relationships ?? graphStats.edges ?? '—'} edges
+                  {graphStats.communities ? ` · ${graphStats.communities} communities` : ''}
+                </p>
+              </>
+            ) : (
+              <p className="text-3xl font-serif text-ink-400">offline</p>
+            )}
           </div>
         </div>
       </div>
-      
+
       {/* Tabs */}
       <div className="flex border-b border-white/10 mt-8 gap-6">
         {['users', 'firs', 'cases'].map((tab) => (

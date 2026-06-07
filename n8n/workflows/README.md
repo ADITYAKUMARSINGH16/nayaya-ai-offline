@@ -6,7 +6,7 @@ wire the placeholder outbound nodes (Email/Slack/Telegram).
 
 | File | Trigger | What it does |
 |------|---------|--------------|
-| **`case-notify-fanout.json`** | Webhook `POST /webhook/case-notify` (backend calls this on every verdict) | Fans out the verdict to Email + Slack + Telegram + WhatsApp branches in parallel. |
+| **`case-notify-fanout.json`** | Webhook `POST /webhook/case-notify` (backend calls this on every verdict) | Fans out the verdict to Email + Slack + Telegram + WhatsApp branches in parallel. **Telegram is wired live** (uses `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` — same vars `fir-human-approval` already uses); Email / Slack / WhatsApp remain placeholder noOps until you wire the n8n credentials for those channels. |
 | **`fir-human-approval.json`** | Webhook `POST /webhook/fir-approve` (backend calls when `N8N_FIR_APPROVAL=true`) | `Wait` node pauses the flow; reviewer clicks Approve/Reject; on resume the workflow calls the backend back to set the FIR's status. |
 | **`eval-cron.json`** | Schedule (daily 09:00 IST) | Runs `python -m eval.runner` inside the backend container *and* fetches `/api/eval/latest` for a Slack/Email digest. |
 | **`graph-rebuild-cron.json`** | Schedule (weekly Sunday 03:00 IST) | POSTs `/api/admin/rebuild-graph` (admin JWT) so newly-ingested statutes show up in LegalGraph-Lite. |
@@ -26,6 +26,8 @@ wire the placeholder outbound nodes (Email/Slack/Telegram).
 | Var | Used by |
 |-----|---------|
 | `WEBHOOK_URL` | n8n base — used by `fir-human-approval` for resume URLs |
+| `TELEGRAM_BOT_TOKEN` | `fir-human-approval` + `case-notify-fanout` (Telegram branch) |
+| `TELEGRAM_CHAT_ID` | `fir-human-approval` + `case-notify-fanout` (Telegram branch) |
 | `GROQ_API_KEY` | `agent-petitioner` |
 | `ADMIN_INTERNAL_KEY` | `graph-rebuild-cron` + `eval-cron` (shared secret matched on the backend via `X-Internal-Key`) |
 

@@ -59,16 +59,24 @@
     },
     {
       "parameters": {
-        "options": {}
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{ \"Content-Type\": \"application/json\" }",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  chat_id: $env.TELEGRAM_CHAT_ID,\n  text: '⚖️ *' + $json.subject + '*\\n\\n*Court level:* ' + $json.court + '\\n*Applicable sections:* ' + ($json.sections || '—') + '\\n\\n*Verdict:*\\n```\\n' + $json.verdict + '\\n```',\n  parse_mode: 'Markdown'\n}) }}",
+        "options": { "timeout": 15000 }
       },
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
       "position": [
         60,
         100
       ],
       "id": "telegram",
-      "name": "Telegram (placeholder — wire Telegram node)"
+      "name": "Telegram (sendMessage)"
     },
     {
       "parameters": {
@@ -125,7 +133,7 @@
             "index": 0
           },
           {
-            "node": "Telegram (placeholder — wire Telegram node)",
+            "node": "Telegram (sendMessage)",
             "type": "main",
             "index": 0
           },
@@ -159,7 +167,7 @@
         ]
       ]
     },
-    "Telegram (placeholder — wire Telegram node)": {
+    "Telegram (sendMessage)": {
       "main": [
         [
           {

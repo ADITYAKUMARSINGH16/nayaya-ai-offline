@@ -39,6 +39,13 @@ def save_message(
     message: str,
     metadata: dict[str, Any] | None = None,
 ) -> None:
+    """Persist one chat message. Silent no-op on any failure.
+
+    Same rationale as fetch_history: this is called from inside the async
+    SSE generator. Any raised exception would tear down the stream before
+    the first event reaches the browser. Local mode without Supabase just
+    skips persistence.
+    """
     row: dict[str, Any] = {
         "session_id": session_id,
         "user_id": user_id,
@@ -47,20 +54,37 @@ def save_message(
     }
     if metadata is not None:
         row["metadata"] = metadata
-    _client().table("chat_history").insert(row).execute()
+    try:
+        _client().table("chat_history").insert(row).execute()
+    except Exception:
+        pass
 
 
 def fetch_history(session_id: str, limit: int = 12) -> list[dict[str, Any]]:
-    res = (
-        _client()
-        .table("chat_history")
-        .select("*")
-        .eq("session_id", session_id)
-        .order("created_at", desc=False)
-        .limit(limit)
-        .execute()
-    )
-    return res.data or []
+    """Read the last `limit` messages of a session, oldest-first.
+
+    Returns [] on ANY failure (no Supabase configured, network blip, table
+    missing, etc.). The assistant streaming endpoint reads history before
+    yielding its first SSE event; if this function raised, the generator
+    would die before sse-starlette could send the 200 OK headers and the
+    browser would see a bare connection drop ("network error"), not an
+    HTTP error. Failing soft here means the assistant just operates without
+    history context, which is the right behaviour in soft-auth / no-Supabase
+    local mode.
+    """
+    try:
+        res = (
+            _client()
+            .table("chat_history")
+            .select("*")
+            .eq("session_id", session_id)
+            .order("created_at", desc=False)
+            .limit(limit)
+            .execute()
+        )
+        return res.data or []
+    except Exception:
+        return []
 
 
 # ---- FIR ----------------------------------------------------------------
@@ -116,9 +140,21 @@ def get_case(case_id: str) -> dict[str, Any] | None:
     return res.data
 
 
-def list_all_cases() -> list[dict[str, Any]]:
-    """List all cases (for Judges/Lawyers to view the pool)."""
-    res = _client().table("cases").select("*").order("created_at", desc=True).execute()
+def list_all_cases(*, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
+    """List cases (for Judges/Lawyers to view the pool). Paginated by default.
+
+    Why paginated: a year of usage could mean tens of thousands of cases —
+    unconditionally returning everything kills the dashboard. limit defaults
+    to 50 (matching `list_user_cases`); callers may raise it via query param.
+    """
+    res = (
+        _client()
+        .table("cases")
+        .select("*")
+        .order("created_at", desc=True)
+        .range(offset, offset + limit - 1)
+        .execute()
+    )
     return res.data or []
 
 

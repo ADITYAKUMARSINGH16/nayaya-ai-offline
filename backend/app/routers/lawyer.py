@@ -24,9 +24,11 @@ class LawyerAnalyzeRequest(BaseModel):
 @router.get("/cases")
 async def get_lawyer_cases(
     user: Annotated[CurrentUser, Depends(require_lawyer)],
+    limit: int = 50,
+    offset: int = 0,
 ):
-    """Get cases. Can be filtered by assigned_lawyer later."""
-    cases = db.list_all_cases()
+    """Get cases. Can be filtered by assigned_lawyer later. Paginated."""
+    cases = db.list_all_cases(limit=min(limit, 200), offset=offset)
     return cases
 
 
@@ -51,20 +53,39 @@ async def analyze_case(
         ctx = rag["context"]
 
         prompt = f"CASE FACTS:\n{req.case_facts}\n\nLEGAL CONTEXT:\n{ctx}"
-        
+
         data = await get_llm().complete_json(
             [{"role": "system", "content": LAWYER_ANALYSIS}, {"role": "user", "content": prompt}],
             temperature=0.3,
         )
-        
-        # 3. Verify citations
+
+        # Verify citations
         blob = " ".join(data.get("strengths", []) + data.get("weaknesses", []))
         citations = await verify_text(blob)
-        
+
+        # Fetch historical precedents (matches judge.py — keeps sidebar in sync)
+        try:
+            from app.services.vector_store import search_case_laws
+            similar_cases = await search_case_laws(req.case_facts, top_k=3)
+        except Exception:
+            similar_cases = []
+
+        # Build the SAME payload we'll return — and persist THAT, not just the LLM output.
+        # Persisting only `data` (the raw LLM output) loses citations + similar_cases,
+        # so when the user re-opens this conversation later both sidebars stay empty.
+        response_payload = {
+            "strategy":        data.get("strategy", ""),
+            "strengths":       data.get("strengths", []),
+            "weaknesses":      data.get("weaknesses", []),
+            "evidence_needed": data.get("evidence_needed", []),
+            "citations":       [c.model_dump() if hasattr(c, "model_dump") else (c.dict() if hasattr(c, "dict") else c) for c in citations],
+            "similar_cases":   similar_cases,
+        }
+
         session_id = f"lawyer_{uuid.uuid4().hex}"
         try:
             db.save_message(session_id, user.id, "user", req.case_facts, {"type": "lawyer_analysis"})
-            db.save_message(session_id, user.id, "assistant", json.dumps(data), {"type": "lawyer_analysis"})
+            db.save_message(session_id, user.id, "assistant", json.dumps(response_payload), {"type": "lawyer_analysis"})
         except Exception:
             pass
 
@@ -74,6 +95,7 @@ async def analyze_case(
             weaknesses=data.get("weaknesses", []),
             evidence_needed=data.get("evidence_needed", []),
             citations=citations,
+            similar_cases=similar_cases,
             session_id=session_id,
         )
     except Exception as exc:
